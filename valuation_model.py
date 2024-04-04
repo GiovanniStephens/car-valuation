@@ -79,7 +79,7 @@ def main():
                        n_jobs=-1,
                        use_gpu=False,
                        custom_pipeline=None)
-    best_model = compare_models(sort='MAE')
+    # best_model = compare_models(sort='MAE')
     rf = create_model('rf')
     tuned_rf = tune_model(rf)
     final_rf = finalize_model(tuned_rf)
