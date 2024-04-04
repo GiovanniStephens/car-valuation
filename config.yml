@@ -1,5 +1,6 @@
 make: 'Subaru'
 model: 'Outback'
+valuation_listing_id: 4627127218
 feature_engineering:
   columns_to_keep:
     - 'ListingId'
@@ -17,3 +18,5 @@ feature_engineering:
     - 'IsNew'
     - 'IsDealer'
     - 'price'
+sentence_transformer:
+  model: 'paraphrase-MiniLM-L6-v2'
