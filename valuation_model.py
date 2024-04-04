@@ -3,6 +3,9 @@ from pycaret.regression import setup, create_model, tune_model, finalize_model, 
 from pycaret.regression import compare_models,load_model
 import yaml
 from yaml.loader import SafeLoader
+from sentence_transformers import SentenceTransformer
+import hdbscan
+import umap
 
 
 def read_config(filename='config.yml'):
@@ -16,6 +19,19 @@ def load_data(filename='data.pkl'):
     return data
 
 
+def cluster_embeddings(data, model, config, column):
+    embeds = model.encode(data[column].values)
+    reduced = umap.UMAP(n_components=30).fit_transform(embeds)
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=5, prediction_data=True)
+    clusterer.fit(reduced)
+    data['cluster'] = clusterer.labels_
+    cluster_labels = data.groupby('cluster')[column].agg(lambda x: x.value_counts().index[0])
+    data['cluster'] = data['cluster'].map(cluster_labels)
+    data = pd.get_dummies(data, columns=['cluster'], drop_first=True, prefix=column+'_cluster')
+    data = data.drop(column, axis=1)
+    return data
+
+
 def feature_engineering(data, config):
     data['price'] = data['PriceDisplay'].str.extract(r'\$([0-9,]+)')
     data['price'] = data['price'].str.replace(',', '').astype(int)
@@ -25,8 +41,10 @@ def feature_engineering(data, config):
     data = pd.get_dummies(data, columns=['Transmission'], drop_first=True)
     data = pd.get_dummies(data, columns=['Fuel'], drop_first=True)
     data = pd.get_dummies(data, columns=['Cylinders'], drop_first=True)
-    data = pd.get_dummies(data, columns=['ExteriorColour'], drop_first=True)
-    data = pd.get_dummies(data, columns=['StereoDescription'], drop_first=True)
+    model = SentenceTransformer(config['sentence_transformer']['model'])
+    data = cluster_embeddings(data, model, config, 'ExteriorColour')
+    data['StereoDescription'] = data['StereoDescription'].fillna('No stereo')
+    data = cluster_embeddings(data, model, config, 'StereoDescription')
     data['IsNew'] = data['IsNew'].fillna(0)
     data['Year'] = data['Year'] - 2000
     return data
@@ -38,7 +56,7 @@ def main():
     model = config['model']
     data = load_data(f'{make}_{model}_data.pkl')
     data = feature_engineering(data, config)
-    data_point_to_valuate = data[data['ListingId'] == 4627127218]
+    data_point_to_valuate = data[data['ListingId'] == config['valuation_listing_id']]
     data = data.drop(data_point_to_valuate.index)
     data = data.drop('ListingId', axis=1)
 
