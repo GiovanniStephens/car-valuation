@@ -1,6 +1,6 @@
 import pandas as pd
 from pycaret.regression import setup, create_model, tune_model, finalize_model, predict_model, save_model, plot_model
-from pycaret.regression import compare_models,load_model
+from pycaret.regression import compare_models, load_model
 import yaml
 from yaml.loader import SafeLoader
 from sentence_transformers import SentenceTransformer
@@ -50,13 +50,32 @@ def feature_engineering(data, config):
     return data
 
 
+def identify_undervalued_cars(data, config, listingIds, model):
+    predictions = predict_model(model, data=data)
+    undervalued_filter_min = config['undervalued_threshold_min']
+    undervalued_filter_max = config['undervalued_threshold_max']
+    undervalued = predictions[(predictions['price'] < predictions['prediction_label'] - undervalued_filter_min) &
+                              (predictions['price'] > predictions['prediction_label'] - undervalued_filter_max)]
+    undervalued = undervalued.merge(listingIds, left_index=True, right_index=True)
+    filtered_dataframe = undervalued
+    filters = config['final_filters']
+    for filter_rule in filters:
+        column = filter_rule['column']
+        operator = filter_rule['operator']
+        value = filter_rule['value']
+        filtered_dataframe = filtered_dataframe.query(f"{column} {operator} @value")
+    print(filtered_dataframe)
+
+
 def main():
     config = read_config()
     make = config['make']
     model = config['model']
     data = load_data(f'{make}_{model}_data.pkl')
+    data = data[data['BidCount'].isnull()]
     data = feature_engineering(data, config)
     data_point_to_valuate = data[data['ListingId'] == config['valuation_listing_id']]
+    listingIds = data['ListingId']
     data = data.drop(data_point_to_valuate.index)
     data = data.drop('ListingId', axis=1)
 
@@ -83,13 +102,15 @@ def main():
     rf = create_model('rf')
     tuned_rf = tune_model(rf)
     final_rf = finalize_model(tuned_rf)
-    save_model(final_rf, 'final_rf_model')
+    save_model(final_rf, f'{make}_{model}_final_rf_model')
     predictions = predict_model(final_rf, data=out_of_sample)
     valuation = predict_model(final_rf, data=data_point_to_valuate)
     print(valuation)
-    plot_model(final_rf, plot='residuals')
+    # plot_model(final_rf, plot='residuals')
     # plot_model(final_rf, plot='error')
     # plot_model(final_rf, plot='feature')
+    full_data = pd.concat([data, out_of_sample, data_point_to_valuate])
+    identify_undervalued_cars(full_data, config, listingIds, final_rf)
 
 
 if __name__ == '__main__':
