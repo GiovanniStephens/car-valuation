@@ -36,6 +36,7 @@ def feature_engineering(data, config):
     data['price'] = data['PriceDisplay'].str.extract(r'\$([0-9,]+)')
     data['price'] = data['price'].str.replace(',', '').astype(int)
     cols_to_keep = config['feature_engineering']['columns_to_keep']
+    cols_to_keep = [col for col in cols_to_keep if col in data.columns]
     data = data[cols_to_keep]
     data = pd.get_dummies(data, columns=['Region'], drop_first=True)
     data = pd.get_dummies(data, columns=['Transmission'], drop_first=True)
@@ -45,8 +46,9 @@ def feature_engineering(data, config):
     data = cluster_embeddings(data, model, config, 'ExteriorColour')
     data['StereoDescription'] = data['StereoDescription'].fillna('No stereo')
     data = cluster_embeddings(data, model, config, 'StereoDescription')
-    data['IsNew'] = data['IsNew'].fillna(0)
-    data['IsNew'] = data['IsNew'].astype(int)
+    if 'IsNew' in data.columns:
+        data['IsNew'] = data['IsNew'].fillna(0)
+        data['IsNew'] = data['IsNew'].astype(int)
     data['Year'] = data['Year'] - 2000
     return data
 
