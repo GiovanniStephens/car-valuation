@@ -46,6 +46,7 @@ def feature_engineering(data, config):
     data['StereoDescription'] = data['StereoDescription'].fillna('No stereo')
     data = cluster_embeddings(data, model, config, 'StereoDescription')
     data['IsNew'] = data['IsNew'].fillna(0)
+    data['IsNew'] = data['IsNew'].astype(int)
     data['Year'] = data['Year'] - 2000
     return data
 
@@ -72,14 +73,16 @@ def main():
     make = config['make']
     model = config['model']
     data = load_data(f'{make}_{model}_data.pkl')
-    data = data[data['BidCount'].isnull()]
+    try:
+        data = data[data['BidCount'].isnull()]
+    except KeyError:
+        pass
     data = feature_engineering(data, config)
     data_point_to_valuate = data[data['ListingId'] == config['valuation_listing_id']]
     listingIds = data['ListingId']
     data = data.drop(data_point_to_valuate.index)
     data = data.drop('ListingId', axis=1)
-
-    out_of_sample = data.sample(frac=0.2, random_state=42)
+    out_of_sample = data.sample(frac=0.4, random_state=42)
     data = data.drop(out_of_sample.index)
     regression = setup(data=data,
                        target='price',
@@ -104,8 +107,9 @@ def main():
     final_rf = finalize_model(tuned_rf)
     save_model(final_rf, f'{make}_{model}_final_rf_model')
     predictions = predict_model(final_rf, data=out_of_sample)
-    valuation = predict_model(final_rf, data=data_point_to_valuate)
-    print(valuation)
+    if data_point_to_valuate.shape[0] > 0:
+        valuation = predict_model(final_rf, data=data_point_to_valuate)
+        print(valuation)
     # plot_model(final_rf, plot='residuals')
     # plot_model(final_rf, plot='error')
     # plot_model(final_rf, plot='feature')
