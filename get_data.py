@@ -21,14 +21,14 @@ tradeMe = OAuth1Session(consumerKey, consumerSecret)
 
 make = config['make']
 model = config['model']
-url = f'https://api.trademe.co.nz/v1/Search/Motors/Used.json?make={make}&model={model}&rows=500'
-returnedPageAll = tradeMe.get(url)
+base_url = f'https://api.trademe.co.nz/v1/Search/Motors/Used.json?make={make}&model={model}&rows=500'
+returnedPageAll = tradeMe.get(base_url)
 dataRawAll = returnedPageAll.content
 parsedDataAll = json.loads(dataRawAll)
 totalCount = parsedDataAll['TotalCount']
 n_pages = int(totalCount/500) + 1
 for i in range(1, n_pages + 1):
-    url = url + f'&page={i}'
+    url = base_url + f'&page={i}'
     returnedPageAll = tradeMe.get(url)
     dataRawAll = returnedPageAll.content
     parsedDataAll = json.loads(dataRawAll)
