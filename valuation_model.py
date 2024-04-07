@@ -4,8 +4,8 @@ from pycaret.regression import compare_models, load_model
 import yaml
 from yaml.loader import SafeLoader
 from sentence_transformers import SentenceTransformer
-import hdbscan
-import umap
+import sys
+from fuzzywuzzy import process
 
 
 def read_config(filename='config.yml'):
@@ -19,16 +19,23 @@ def load_data(filename='data.pkl'):
     return data
 
 
-def cluster_embeddings(data, model, config, column):
-    embeds = model.encode(data[column].values)
-    reduced = umap.UMAP(n_components=30).fit_transform(embeds)
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=5, prediction_data=True)
-    clusterer.fit(reduced)
-    data['cluster'] = clusterer.labels_
-    cluster_labels = data.groupby('cluster')[column].agg(lambda x: x.value_counts().index[0])
-    data['cluster'] = data['cluster'].map(cluster_labels)
-    data = pd.get_dummies(data, columns=['cluster'], drop_first=True, prefix=column+'_cluster')
-    data = data.drop(column, axis=1)
+def classify_colour(data, embedding_model):
+    embeds = embedding_model.encode(data['ExteriorColour'].values)
+    model = load_model('colour_classifier_model')
+    prediction_data = pd.concat([data['ExteriorColour'].reset_index(), pd.DataFrame(embeds)], axis=1)
+    prediction_data = prediction_data.drop('index', axis=1)
+    predictions = predict_model(model, data=prediction_data)
+    data['colour_label'] = predictions['prediction_label']
+    return data
+
+
+def classify_stereo(data, embedding_model):
+    embeds = embedding_model.encode(data['StereoDescription'].values)
+    model = load_model('stereo_classifier_model')
+    prediction_data = pd.concat([data['StereoDescription'].reset_index(), pd.DataFrame(embeds)], axis=1)
+    prediction_data = prediction_data.drop('index', axis=1)
+    predictions = predict_model(model, data=prediction_data)
+    data['stereo_label'] = predictions['prediction_label']
     return data
 
 
@@ -43,9 +50,14 @@ def feature_engineering(data, config):
     data = pd.get_dummies(data, columns=['Fuel'], drop_first=True)
     data = pd.get_dummies(data, columns=['Cylinders'], drop_first=True)
     model = SentenceTransformer(config['sentence_transformer']['model'])
-    data = cluster_embeddings(data, model, config, 'ExteriorColour')
+    data['ExteriorColour'] = data['ExteriorColour'].fillna('No colour')
+    data = classify_colour(data, model)
+    data = data.drop('ExteriorColour', axis=1)
+    data = pd.get_dummies(data, columns=['colour_label'], drop_first=True)
     data['StereoDescription'] = data['StereoDescription'].fillna('No stereo')
-    data = cluster_embeddings(data, model, config, 'StereoDescription')
+    data = classify_stereo(data, model)
+    data = data.drop('StereoDescription', axis=1)
+    data = pd.get_dummies(data, columns=['stereo_label'], drop_first=True)
     if 'IsNew' in data.columns:
         data['IsNew'] = data['IsNew'].fillna(0)
         data['IsNew'] = data['IsNew'].astype(int)
@@ -76,7 +88,7 @@ def main():
     model = config['model']
     data = load_data(f'{make}_{model}_data.pkl')
     try:
-        data = data[data['BidCount'].isnull()]
+        data = data[data['BidCount'].isnull()].reset_index()
     except KeyError:
         pass
     data = feature_engineering(data, config)
@@ -119,5 +131,113 @@ def main():
     identify_undervalued_cars(full_data, config, listingIds, final_rf)
 
 
+def value_input_car():
+    config = read_config()
+    car_make = config['make']
+    car_model = config['model']
+    model = load_model(f'{car_make}_{car_model}_final_rf_model')
+    embedding_model = SentenceTransformer(config['sentence_transformer']['model'])
+    regions = ['Bay of Plenty',
+               'Canterbury',
+               'Gisborne',
+               "Hawke's Bay",
+               'Manawatu',
+               'Marlborough',
+               'Nelson Bays',
+               'Northland',
+               'Otago',
+               'Southland',
+               'Taranaki',
+               'Timaru - Oamaru',
+               'Waikato',
+               'Wairarapa',
+               'Wellington',
+               'West Coast',
+               'Whanganui']
+    while True:
+        region = input('Enter the region: ')
+        # Match the input to one of the regions
+        best_match = process.extractOne(region, regions)
+        if best_match[1] < 80:
+            print('Error: region not recognised')
+            sys.exit(1)
+        else:
+            region = best_match[0]
+            print(f'Best match: {region}')
+        engine_size = input('Enter the engine size: ')
+        if 'L' in engine_size:
+            engine_size = engine_size.replace('L', '')
+            engine_size = float(engine_size) * 1000
+        elif 'cc' in engine_size:
+            engine_size = engine_size.replace('cc', '')
+            engine_size = float(engine_size)
+        odometer = input('Enter the odometer reading: ')
+        if 'km' in odometer:
+            odometer = odometer.replace('km', '')
+            odometer = float(odometer)
+        year = input('Enter the year: ')
+        year = int(year)
+        fuel_types = ['Petrol', 'Diesel', 'Electric', 'Hybrid']
+        fuel_type = input('Enter the fuel type: ')
+        similarities = process.extractOne(fuel_type, fuel_types)
+        if similarities[1] < 80:
+            print('Error: fuel type not recognised')
+            sys.exit(1)
+        else:
+            fuel_type = similarities[0]
+            print(f'Best match: {fuel_type}')
+        transmissions = ['Automatic', 'Manual']
+        transmission = input('Enter the transmission type: ')
+        similarities = process.extractOne(transmission, transmissions)
+        if similarities[1] < 80:
+            print('Error: transmission type not recognised')
+            sys.exit(1)
+        else:
+            transmission = similarities[0]
+            print(f'Best match: {transmission}')
+        cylinders = [4, 6, 8, 10, 12]
+        cylinder = input('Enter the number of cylinders: ')
+        cylinder = int(cylinder)
+        differences = [abs(cylinder - c) for c in cylinders]
+        cylinder = cylinders[differences.index(min(differences))]
+        print(f'Best match: {cylinder}')
+        exterior_colour = input('Enter the exterior colour: ')
+        stereo_description = input('Enter the stereo description: ')
+        is4Wd = input('Is the car 4WD? (y/n): ')
+        if is4Wd == 'y' or is4Wd == 'Y' or is4Wd == 'yes' or is4Wd == 'Yes':
+            is4Wd = 1
+        else:
+            is4Wd = 0
+        isNew = False
+        isDealer = False
+        colour_label = classify_colour(pd.DataFrame({'ExteriorColour': [exterior_colour]}), embedding_model).iloc[0]['colour_label']
+        stereo_label = classify_stereo(pd.DataFrame({'StereoDescription': [stereo_description]}), embedding_model).iloc[0]['stereo_label']
+        data_point = pd.DataFrame({f'Region_{region}': 1,
+                                'EngineSize': [engine_size],
+                                'Odometer': [odometer],
+                                'Year': [year - 2000],
+                                f'Transmission_{transmission}': 1,
+                                f'Fuel_{fuel_type}': 1,
+                                f'Cylinders_{cylinder}': 1,
+                                f'ExteriorColour_cluster_{colour_label}': 1,
+                                f'StereoDescription_cluster_{stereo_label}': 1,
+                                'Is4WD': [is4Wd],
+                                'IsNew': [isNew],
+                                'IsDealer': [isDealer]})
+        columns = model.feature_names_in_
+        missing_columns = list(set(columns) - set(data_point.columns))
+        for column in missing_columns:
+            data_point[column] = 0
+        data_point = data_point[columns]
+        valuation = predict_model(model, data=data_point)
+        print(valuation)
+
+
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) == 1:
+        main()
+    elif len(sys.argv) == 2:
+        value_input_car()
+    else:
+        print('Error: too many input parameters')
+        sys.exit(1)
