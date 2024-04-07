@@ -1,24 +1,28 @@
-make: 'Subaru'
-model: 'Outback'
+make: 'Toyota'
+model: 'Avensis'
 valuation_listing_id: 4627127218
 final_filters:
   - 'price':
     column: 'price'
     operator: '<='
-    value: 15000
+    value: 5000
   - 'Year':
     column: 'Year'
     operator: '>='
-    value: 10
+    value: 4
   - 'Odometer':
     column: 'Odometer'
     operator: '<='
-    value: 200000
-  - 'Is4WD':
-    column: 'Is4WD'
+    value: 230000
+  # - 'Is4WD':
+  #   column: 'Is4WD'
+  #   operator: '=='
+  #   value: True
+  - 'Region_Otago':
+    column: 'Region_Otago'
     operator: '=='
-    value: True
-undervalued_threshold_min: 3000
+    value: 1
+undervalued_threshold_min: 1000
 undervalued_threshold_max: 10000
 feature_engineering:
   columns_to_keep:
