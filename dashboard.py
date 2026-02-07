@@ -203,6 +203,11 @@ def render_paste_listing_section():
                 st.error("Please paste some listing text first.")
                 return
 
+            # Clear previous edit widget values so new extraction populates them
+            for key in list(st.session_state.keys()):
+                if isinstance(key, str) and key.startswith("edit_"):
+                    del st.session_state[key]
+
             try:
                 from llm_extraction import extract_car_params
 
@@ -210,6 +215,7 @@ def render_paste_listing_section():
                     extracted = extract_car_params(listing_text)
                 st.session_state["extracted_listing"] = extracted
                 st.session_state["extraction_error"] = None
+                st.session_state["apply_extracted_make_model"] = True
             except ValueError as e:
                 st.session_state["extraction_error"] = str(e)
                 st.session_state.pop("extracted_listing", None)
@@ -243,9 +249,10 @@ def render_paste_listing_section():
             has_general = _has_general_model()
 
             # Find if we have a specific model
+            extracted_make = (extracted.make or "").lower()
+            extracted_model = (extracted.model or "").lower()
             specific_model_exists = any(
-                m.lower() == extracted.make.lower()
-                and mdl.lower() == extracted.model.lower()
+                m.lower() == extracted_make and mdl.lower() == extracted_model
                 for m, mdl in available_models
             )
 
@@ -265,18 +272,22 @@ def render_paste_listing_section():
             col1, col2 = st.columns(2)
 
             with col1:
-                make = st.text_input("Make", value=extracted.make, key="edit_make")
-                model = st.text_input("Model", value=extracted.model, key="edit_model")
+                make = st.text_input(
+                    "Make", value=extracted.make or "", key="edit_make"
+                )
+                model = st.text_input(
+                    "Model", value=extracted.model or "", key="edit_model"
+                )
                 year = st.number_input(
                     "Year",
-                    value=extracted.year,
+                    value=extracted.year or 2015,
                     min_value=1990,
                     max_value=2026,
                     key="edit_year",
                 )
                 odometer = st.number_input(
                     "Odometer (km)",
-                    value=extracted.odometer,
+                    value=extracted.odometer or 100000,
                     min_value=0,
                     key="edit_odometer",
                 )
@@ -1183,12 +1194,30 @@ def main():
         )
         return
 
+    # Apply extracted make/model to sidebar if pending
+    if st.session_state.get("apply_extracted_make_model"):
+        extracted = st.session_state.get("extracted_listing")
+        if extracted:
+            # Find matching make
+            extracted_make_lower = (extracted.make or "").lower()
+            for make in available.keys():
+                if make.lower() == extracted_make_lower:
+                    st.session_state["sidebar_make"] = make
+                    # Find matching model for this make
+                    extracted_model_lower = (extracted.model or "").lower()
+                    for model in available[make]:
+                        if model.lower() == extracted_model_lower:
+                            st.session_state["sidebar_model"] = model
+                            break
+                    break
+        del st.session_state["apply_extracted_make_model"]
+
     with st.sidebar:
         st.header("Model Selection")
         makes = list(available.keys())
-        selected_make = st.selectbox("Make", makes)
+        selected_make = st.selectbox("Make", makes, key="sidebar_make")
         models = available[selected_make]
-        selected_model = st.selectbox("Model", models)
+        selected_model = st.selectbox("Model", models, key="sidebar_model")
 
         # Show metadata
         model_path = f"models/{selected_make}_{selected_model}"
