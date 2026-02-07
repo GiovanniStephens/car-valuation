@@ -13,7 +13,6 @@ Usage:
 
 import os
 import sys
-import pickle
 import warnings
 
 # Disable tokenizer parallelism before forking to avoid deadlock warnings
@@ -27,39 +26,28 @@ warnings.filterwarnings("ignore")
 # These re-exports maintain compatibility with existing code that imports from
 # valuation_model (e.g., `from valuation_model import feature_engineering`)
 
-from utils import (
+from utils import (  # noqa: E402
     load_config as read_config,
     load_training_config,
     load_data,
     save_model_metadata,
-    load_model_metadata,
-    apply_filters,
     get_model_path,
     get_quantile_model_path,
 )
 
-from feature_engineering import (
+from feature_engineering import (  # noqa: E402
     feature_engineering,
-    build_data_point,
-    classify_colour,
-    classify_stereo,
 )
 
-from training import (
+from training import (  # noqa: E402
     train_autogluon,
     train_quantile_model,
     train_tail_models,
     save_tail_models,
-    load_tail_models,
 )
 
-from inference import (
-    predict_blended,
-    predict_with_confidence,
-    calculate_depreciation,
+from inference import (  # noqa: E402
     identify_undervalued_cars,
-    get_input_with_match,
-    get_numeric_input,
     run_interactive_valuation as value_input_car,
     value_car as value_from_config,
 )
@@ -82,7 +70,6 @@ def train_model_cli():
     6. Evaluates on out-of-sample data
     7. Identifies undervalued cars in the dataset
     """
-    from autogluon.tabular import TabularPredictor
     import pandas as pd
 
     config = read_config()
@@ -125,8 +112,12 @@ def train_model_cli():
     print("Training tail regression models...")
     tail_info = train_tail_models(data, training_config)
     save_tail_models(tail_info, model_path)
-    print(f"  Low tail samples: {tail_info['low_n']}, model: {'yes' if tail_info['low_model'] else 'no'}")
-    print(f"  High tail samples: {tail_info['high_n']}, model: {'yes' if tail_info['high_model'] else 'no'}")
+    print(
+        f"  Low tail samples: {tail_info['low_n']}, model: {'yes' if tail_info['low_model'] else 'no'}"
+    )
+    print(
+        f"  High tail samples: {tail_info['high_n']}, model: {'yes' if tail_info['high_model'] else 'no'}"
+    )
 
     # Evaluate on out-of-sample data
     print("\nModel leaderboard:")
@@ -134,14 +125,20 @@ def train_model_cli():
 
     # Valuate specific car if requested
     if data_point_to_valuate.shape[0] > 0:
-        valuation_data = data_point_to_valuate.drop("ListingId", axis=1, errors="ignore")
+        valuation_data = data_point_to_valuate.drop(
+            "ListingId", axis=1, errors="ignore"
+        )
         pred = predictor.predict(valuation_data)
-        print(f"\nValuation for listing {config['valuation_listing_id']}: ${pred.iloc[0]:,.0f}")
+        print(
+            f"\nValuation for listing {config['valuation_listing_id']}: ${pred.iloc[0]:,.0f}"
+        )
 
     # Identify undervalued cars
     full_data = pd.concat([data, out_of_sample])
     if data_point_to_valuate.shape[0] > 0:
-        valuation_data_full = data_point_to_valuate.drop("ListingId", axis=1, errors="ignore")
+        valuation_data_full = data_point_to_valuate.drop(
+            "ListingId", axis=1, errors="ignore"
+        )
         full_data = pd.concat([full_data, valuation_data_full])
     identify_undervalued_cars(full_data, config, listing_ids, predictor)
 

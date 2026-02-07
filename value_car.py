@@ -25,12 +25,14 @@ def load_car_to_value():
 def check_data_exists(make, model):
     """Check if data file exists for the given make/model."""
     from utils import get_data_path
+
     return os.path.exists(get_data_path(make, model))
 
 
 def check_model_exists(make, model):
     """Check if trained AutoGluon model exists for the given make/model."""
     from utils import get_model_path
+
     return os.path.isdir(get_model_path(make, model))
 
 
@@ -52,9 +54,9 @@ def fetch_data(make, model):
     """Fetch data from TradeMe API."""
     from utils import fetch_trademe_data
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Fetching data for {make} {model}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     # Ensure car_search.yml is updated
     update_car_search_config(make, model)
@@ -65,9 +67,9 @@ def fetch_data(make, model):
 
 def train_model(make, model):
     """Train the valuation model using AutoGluon."""
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Training model for {make} {model}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     # Ensure car_search.yml is updated
     update_car_search_config(make, model)
@@ -82,9 +84,9 @@ def train_model(make, model):
 
 def run_valuation():
     """Run the valuation using car_to_value.yml."""
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("  Running Valuation")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     from inference import value_car
 
@@ -98,10 +100,10 @@ def main():
     make = car_specs["make"]
     model = car_specs["model"]
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("  Car Valuation Pipeline")
     print(f"  {make} {model}")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
 
     # Step 1: Check/fetch data
     if check_data_exists(make, model):
@@ -124,6 +126,7 @@ def main():
 if __name__ == "__main__":
     if "--dashboard" in sys.argv:
         import subprocess
+
         subprocess.run([sys.executable, "-m", "streamlit", "run", "dashboard.py"])
     else:
         main()

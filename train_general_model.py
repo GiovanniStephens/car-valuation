@@ -40,9 +40,9 @@ def main():
         print("ERROR: No data files found in data/")
         return
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("  TRAINING GENERAL CROSS-CAR-TYPE MODEL")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"  Data files found: {len(data_files)}\n")
 
     all_data = []
@@ -100,13 +100,22 @@ def main():
     print(f"  Car types: {len(all_data)}")
 
     # Ensure categorical types
-    for col in ["Make", "Model", "Region", "Transmission", "Fuel", "Cylinders", "colour_label", "stereo_label"]:
+    for col in [
+        "Make",
+        "Model",
+        "Region",
+        "Transmission",
+        "Fuel",
+        "Cylinders",
+        "colour_label",
+        "stereo_label",
+    ]:
         if col in combined.columns:
             combined[col] = combined[col].astype(str)
 
     # Train
     model_path = "models/general_model"
-    print(f"\n  Training AutoGluon general model...")
+    print("\n  Training AutoGluon general model...")
     print(f"  Preset: {training_config.get('preset', 'best_quality')}")
     print(f"  Time limit: {time_limit}s\n")
 

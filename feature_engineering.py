@@ -11,24 +11,22 @@ from sentence_transformers import SentenceTransformer
 
 
 def classify_colour(
-    data: pd.DataFrame, embedding_model: SentenceTransformer, make: str, car_model: str
+    data: pd.DataFrame, embedding_model: SentenceTransformer
 ) -> pd.DataFrame:
     """Classify exterior colour descriptions into standardized labels.
 
-    Uses a pre-trained PyCaret classifier with sentence embeddings to map
+    Uses a general pre-trained PyCaret classifier with sentence embeddings to map
     free-text colour descriptions to consistent labels (e.g., "White", "Black", "Silver").
 
     Args:
         data: DataFrame with an "ExteriorColour" column containing colour descriptions.
         embedding_model: Sentence transformer model for encoding text.
-        make: Car make (e.g., "Toyota").
-        car_model: Car model (e.g., "Rav4").
 
     Returns:
         DataFrame with a new "colour_label" column containing classified colours.
     """
     embeds = embedding_model.encode(data["ExteriorColour"].values)
-    classifier = load_model(f"models/{make}_{car_model}/exteriorcolour_classifier_model")
+    classifier = load_model("models/colour_classifier_model")
     prediction_data = pd.concat(
         [data["ExteriorColour"].reset_index(drop=True), pd.DataFrame(embeds)], axis=1
     )
@@ -39,24 +37,22 @@ def classify_colour(
 
 
 def classify_stereo(
-    data: pd.DataFrame, embedding_model: SentenceTransformer, make: str, car_model: str
+    data: pd.DataFrame, embedding_model: SentenceTransformer
 ) -> pd.DataFrame:
     """Classify stereo descriptions into standardized labels.
 
-    Uses a pre-trained PyCaret classifier with sentence embeddings to map
+    Uses a general pre-trained PyCaret classifier with sentence embeddings to map
     free-text stereo descriptions to consistent labels (e.g., "Basic", "Premium").
 
     Args:
         data: DataFrame with a "StereoDescription" column.
         embedding_model: Sentence transformer model for encoding text.
-        make: Car make (e.g., "Toyota").
-        car_model: Car model (e.g., "Rav4").
 
     Returns:
         DataFrame with a new "stereo_label" column containing classified stereo types.
     """
     embeds = embedding_model.encode(data["StereoDescription"].values)
-    classifier = load_model(f"models/{make}_{car_model}/stereodescription_classifier_model")
+    classifier = load_model("models/stereo_classifier_model")
     prediction_data = pd.concat(
         [data["StereoDescription"].reset_index(drop=True), pd.DataFrame(embeds)], axis=1
     )
@@ -96,15 +92,13 @@ def feature_engineering(data: pd.DataFrame, config: dict) -> pd.DataFrame:
 
     # Colour and stereo classification -> string labels (no one-hot)
     embedding_model = SentenceTransformer(config["sentence_transformer"]["model"])
-    make = config["make"]
-    car_model = config["model"]
 
     data["ExteriorColour"] = data["ExteriorColour"].fillna("No colour")
-    data = classify_colour(data, embedding_model, make, car_model)
+    data = classify_colour(data, embedding_model)
     data = data.drop("ExteriorColour", axis=1)
 
     data["StereoDescription"] = data["StereoDescription"].fillna("No stereo")
-    data = classify_stereo(data, embedding_model, make, car_model)
+    data = classify_stereo(data, embedding_model)
     data = data.drop("StereoDescription", axis=1)
 
     # Derived features
@@ -116,7 +110,14 @@ def feature_engineering(data: pd.DataFrame, config: dict) -> pd.DataFrame:
         data["IsNew"] = data["IsNew"].fillna(0).astype(int)
 
     # Categorical columns stay as strings -- AutoGluon handles them natively
-    for col in ["Region", "Transmission", "Fuel", "Cylinders", "colour_label", "stereo_label"]:
+    for col in [
+        "Region",
+        "Transmission",
+        "Fuel",
+        "Cylinders",
+        "colour_label",
+        "stereo_label",
+    ]:
         if col in data.columns:
             data[col] = data[col].astype(str)
 
@@ -162,19 +163,21 @@ def build_data_point(
     age = 2026 - year
     km_per_year = odometer / max(age, 1)
 
-    return pd.DataFrame({
-        "Region": [region],
-        "EngineSize": [engine_size],
-        "Odometer": [odometer],
-        "Year": [year],
-        "Transmission": [transmission],
-        "Fuel": [fuel_type],
-        "Cylinders": [str(cylinder)],
-        "colour_label": [colour_label],
-        "stereo_label": [stereo_label],
-        "Is4WD": [is_4wd],
-        "IsNew": [int(is_new)],
-        "IsDealer": [int(is_dealer)],
-        "Age": [age],
-        "KmPerYear": [km_per_year],
-    })
+    return pd.DataFrame(
+        {
+            "Region": [region],
+            "EngineSize": [engine_size],
+            "Odometer": [odometer],
+            "Year": [year],
+            "Transmission": [transmission],
+            "Fuel": [fuel_type],
+            "Cylinders": [str(cylinder)],
+            "colour_label": [colour_label],
+            "stereo_label": [stereo_label],
+            "Is4WD": [is_4wd],
+            "IsNew": [int(is_new)],
+            "IsDealer": [int(is_dealer)],
+            "Age": [age],
+            "KmPerYear": [km_per_year],
+        }
+    )

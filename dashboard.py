@@ -89,18 +89,21 @@ def _load_yaml(path):
 @st.cache_resource
 def load_predictor(path):
     from autogluon.tabular import TabularPredictor
+
     return TabularPredictor.load(path)
 
 
 @st.cache_resource
 def load_quantile_predictor(path):
     from autogluon.tabular import TabularPredictor
+
     return TabularPredictor.load(path)
 
 
 @st.cache_resource
 def load_embedding_model(name):
     from sentence_transformers import SentenceTransformer
+
     return SentenceTransformer(name)
 
 
@@ -241,7 +244,8 @@ def render_paste_listing_section():
 
             # Find if we have a specific model
             specific_model_exists = any(
-                m.lower() == extracted.make.lower() and mdl.lower() == extracted.model.lower()
+                m.lower() == extracted.make.lower()
+                and mdl.lower() == extracted.model.lower()
                 for m, mdl in available_models
             )
 
@@ -264,10 +268,17 @@ def render_paste_listing_section():
                 make = st.text_input("Make", value=extracted.make, key="edit_make")
                 model = st.text_input("Model", value=extracted.model, key="edit_model")
                 year = st.number_input(
-                    "Year", value=extracted.year, min_value=1990, max_value=2026, key="edit_year"
+                    "Year",
+                    value=extracted.year,
+                    min_value=1990,
+                    max_value=2026,
+                    key="edit_year",
                 )
                 odometer = st.number_input(
-                    "Odometer (km)", value=extracted.odometer, min_value=0, key="edit_odometer"
+                    "Odometer (km)",
+                    value=extracted.odometer,
+                    min_value=0,
+                    key="edit_odometer",
                 )
                 engine_cc = st.number_input(
                     "Engine Size (cc)",
@@ -281,7 +292,9 @@ def render_paste_listing_section():
                 fuel_type = st.selectbox(
                     "Fuel Type",
                     ["Petrol", "Diesel", "Electric", "Hybrid"],
-                    index=["Petrol", "Diesel", "Electric", "Hybrid"].index(extracted.fuel_type),
+                    index=["Petrol", "Diesel", "Electric", "Hybrid"].index(
+                        extracted.fuel_type
+                    ),
                     key="edit_fuel",
                 )
                 transmission = st.selectbox(
@@ -293,26 +306,47 @@ def render_paste_listing_section():
                 cylinders = st.selectbox(
                     "Cylinders",
                     [3, 4, 6, 8, 10, 12],
-                    index=[3, 4, 6, 8, 10, 12].index(extracted.cylinders) if extracted.cylinders in [3, 4, 6, 8, 10, 12] else 1,
+                    index=[3, 4, 6, 8, 10, 12].index(extracted.cylinders)
+                    if extracted.cylinders in [3, 4, 6, 8, 10, 12]
+                    else 1,
                     key="edit_cylinders",
                 )
-                is_4wd = st.checkbox("4WD / AWD", value=extracted.is_4wd, key="edit_4wd")
+                is_4wd = st.checkbox(
+                    "4WD / AWD", value=extracted.is_4wd, key="edit_4wd"
+                )
                 colour = st.text_input(
-                    "Exterior Colour", value=extracted.exterior_colour, key="edit_colour"
+                    "Exterior Colour",
+                    value=extracted.exterior_colour,
+                    key="edit_colour",
                 )
 
             # Region selector
             regions = [
-                "Auckland", "Bay of Plenty", "Canterbury", "Gisborne",
-                "Hawke's Bay", "Manawatu", "Marlborough", "Nelson Bays",
-                "Northland", "Otago", "Southland", "Taranaki",
-                "Timaru - Oamaru", "Waikato", "Wairarapa", "Wellington",
-                "West Coast", "Whanganui",
+                "Auckland",
+                "Bay of Plenty",
+                "Canterbury",
+                "Gisborne",
+                "Hawke's Bay",
+                "Manawatu",
+                "Marlborough",
+                "Nelson Bays",
+                "Northland",
+                "Otago",
+                "Southland",
+                "Taranaki",
+                "Timaru - Oamaru",
+                "Waikato",
+                "Wairarapa",
+                "Wellington",
+                "West Coast",
+                "Whanganui",
             ]
             default_region_idx = 0
             if extracted.region and extracted.region in regions:
                 default_region_idx = regions.index(extracted.region)
-            region = st.selectbox("Region", regions, index=default_region_idx, key="edit_region")
+            region = st.selectbox(
+                "Region", regions, index=default_region_idx, key="edit_region"
+            )
 
             # Asking price display
             if extracted.asking_price:
@@ -320,33 +354,48 @@ def render_paste_listing_section():
 
             # Run valuation button
             can_value = specific_model_exists or has_general
-            if st.button("Run Valuation", disabled=not can_value, key="run_valuation_button"):
-                # Determine which make/model to use for prediction and classifiers
+            if st.button(
+                "Run Valuation", disabled=not can_value, key="run_valuation_button"
+            ):
+                # Determine which make/model to use for prediction
                 if specific_model_exists:
                     pred_make, pred_model = next(
-                        (m, mdl) for m, mdl in available_models
+                        (m, mdl)
+                        for m, mdl in available_models
                         if m.lower() == make.lower() and mdl.lower() == model.lower()
                     )
                 else:
-                    pred_make, pred_model = available_models[0] if available_models else ("General", "Model")
+                    pred_make, pred_model = (
+                        available_models[0]
+                        if available_models
+                        else ("General", "Model")
+                    )
 
                 model_settings = _load_yaml("model_settings.yml")
-                embedding_model = load_embedding_model(model_settings["text_embedding_model"])
+                embedding_model = load_embedding_model(
+                    model_settings["text_embedding_model"]
+                )
 
                 # Classify colour and stereo
                 colour_label = classify_colour(
-                    pd.DataFrame({"ExteriorColour": [colour]}), embedding_model,
-                    pred_make, pred_model,
+                    pd.DataFrame({"ExteriorColour": [colour]}), embedding_model
                 ).iloc[0]["colour_label"]
                 stereo_label = classify_stereo(
-                    pd.DataFrame({"StereoDescription": ["Standard"]}), embedding_model,
-                    pred_make, pred_model,
+                    pd.DataFrame({"StereoDescription": ["Standard"]}), embedding_model
                 ).iloc[0]["stereo_label"]
 
                 # Build data point
                 data_point = build_data_point(
-                    region, engine_cc, odometer, year, fuel_type, transmission,
-                    cylinders, colour_label, stereo_label, 1 if is_4wd else 0,
+                    region,
+                    engine_cc,
+                    odometer,
+                    year,
+                    fuel_type,
+                    transmission,
+                    cylinders,
+                    colour_label,
+                    stereo_label,
+                    1 if is_4wd else 0,
                 )
 
                 try:
@@ -400,27 +449,44 @@ def render_paste_listing_section():
                     fig = go.Figure()
                     if "ci_80" in result:
                         lo80, hi80 = result["ci_80"]
-                        fig.add_trace(go.Bar(
-                            y=["Estimate"], x=[hi80 - lo80], base=[lo80],
-                            orientation="h", name="80% CI",
-                            marker_color="rgba(99,110,250,0.25)",
-                        ))
+                        fig.add_trace(
+                            go.Bar(
+                                y=["Estimate"],
+                                x=[hi80 - lo80],
+                                base=[lo80],
+                                orientation="h",
+                                name="80% CI",
+                                marker_color="rgba(99,110,250,0.25)",
+                            )
+                        )
                     if "ci_50" in result:
                         lo50, hi50 = result["ci_50"]
-                        fig.add_trace(go.Bar(
-                            y=["Estimate"], x=[hi50 - lo50], base=[lo50],
-                            orientation="h", name="50% CI",
-                            marker_color="rgba(99,110,250,0.5)",
-                        ))
-                    fig.add_trace(go.Scatter(
-                        x=[estimate], y=["Estimate"], mode="markers",
-                        marker=dict(size=14, color="red", symbol="diamond"),
-                        name="Point Estimate",
-                    ))
+                        fig.add_trace(
+                            go.Bar(
+                                y=["Estimate"],
+                                x=[hi50 - lo50],
+                                base=[lo50],
+                                orientation="h",
+                                name="50% CI",
+                                marker_color="rgba(99,110,250,0.5)",
+                            )
+                        )
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[estimate],
+                            y=["Estimate"],
+                            mode="markers",
+                            marker=dict(size=14, color="red", symbol="diamond"),
+                            name="Point Estimate",
+                        )
+                    )
                     fig.update_layout(
-                        height=100, margin=dict(l=0, r=0, t=0, b=0),
-                        xaxis_title="Price ($)", barmode="overlay",
-                        showlegend=True, legend=dict(orientation="h", y=-0.5),
+                        height=100,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis_title="Price ($)",
+                        barmode="overlay",
+                        showlegend=True,
+                        legend=dict(orientation="h", y=-0.5),
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
@@ -477,15 +543,23 @@ def render_valuation_page(make, model_name):
     embedding_model = load_embedding_model(model_settings["text_embedding_model"])
 
     colour_label = classify_colour(
-        pd.DataFrame({"ExteriorColour": [exterior_colour]}), embedding_model, v_make, v_model
+        pd.DataFrame({"ExteriorColour": [exterior_colour]}), embedding_model
     ).iloc[0]["colour_label"]
     stereo_label = classify_stereo(
-        pd.DataFrame({"StereoDescription": [stereo_description]}), embedding_model, v_make, v_model
+        pd.DataFrame({"StereoDescription": [stereo_description]}), embedding_model
     ).iloc[0]["stereo_label"]
 
     data_point = build_data_point(
-        region, engine_size, odometer, year, fuel_type, transmission,
-        cylinder, colour_label, stereo_label, is4Wd,
+        region,
+        engine_size,
+        odometer,
+        year,
+        fuel_type,
+        transmission,
+        cylinder,
+        colour_label,
+        stereo_label,
+        is4Wd,
     )
 
     # Predict
@@ -505,9 +579,13 @@ def render_valuation_page(make, model_name):
 
     # Tail adjustment indicator
     if result.get("tail") == "low":
-        st.warning("Tail-adjusted (low end) — prediction blended with low-tail Ridge model.")
+        st.warning(
+            "Tail-adjusted (low end) — prediction blended with low-tail Ridge model."
+        )
     elif result.get("tail") == "high":
-        st.info("Tail-adjusted (high end) — prediction blended with high-tail Ridge model.")
+        st.info(
+            "Tail-adjusted (high end) — prediction blended with high-tail Ridge model."
+        )
 
     # Confidence interval chart
     if "ci_80" in result or "ci_50" in result:
@@ -517,37 +595,54 @@ def render_valuation_page(make, model_name):
         # 80% CI band
         if "ci_80" in result:
             lo80, hi80 = result["ci_80"]
-            fig.add_trace(go.Bar(
-                y=["Estimate"], x=[hi80 - lo80], base=[lo80],
-                orientation="h", name="80% CI",
-                marker_color="rgba(99,110,250,0.25)",
-                hovertemplate="80%% CI: $%{base:,.0f} – $%{customdata:,.0f}<extra></extra>",
-                customdata=[hi80],
-            ))
+            fig.add_trace(
+                go.Bar(
+                    y=["Estimate"],
+                    x=[hi80 - lo80],
+                    base=[lo80],
+                    orientation="h",
+                    name="80% CI",
+                    marker_color="rgba(99,110,250,0.25)",
+                    hovertemplate="80%% CI: $%{base:,.0f} – $%{customdata:,.0f}<extra></extra>",
+                    customdata=[hi80],
+                )
+            )
 
         # 50% CI band
         if "ci_50" in result:
             lo50, hi50 = result["ci_50"]
-            fig.add_trace(go.Bar(
-                y=["Estimate"], x=[hi50 - lo50], base=[lo50],
-                orientation="h", name="50% CI",
-                marker_color="rgba(99,110,250,0.5)",
-                hovertemplate="50%% CI: $%{base:,.0f} – $%{customdata:,.0f}<extra></extra>",
-                customdata=[hi50],
-            ))
+            fig.add_trace(
+                go.Bar(
+                    y=["Estimate"],
+                    x=[hi50 - lo50],
+                    base=[lo50],
+                    orientation="h",
+                    name="50% CI",
+                    marker_color="rgba(99,110,250,0.5)",
+                    hovertemplate="50%% CI: $%{base:,.0f} – $%{customdata:,.0f}<extra></extra>",
+                    customdata=[hi50],
+                )
+            )
 
         # Point estimate marker
-        fig.add_trace(go.Scatter(
-            x=[estimate], y=["Estimate"], mode="markers",
-            marker=dict(size=14, color="red", symbol="diamond"),
-            name="Point Estimate",
-            hovertemplate="Estimate: $%{x:,.0f}<extra></extra>",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=[estimate],
+                y=["Estimate"],
+                mode="markers",
+                marker=dict(size=14, color="red", symbol="diamond"),
+                name="Point Estimate",
+                hovertemplate="Estimate: $%{x:,.0f}<extra></extra>",
+            )
+        )
 
         fig.update_layout(
-            height=120, margin=dict(l=0, r=0, t=0, b=0),
-            xaxis_title="Price ($)", barmode="overlay",
-            showlegend=True, legend=dict(orientation="h", y=-0.4),
+            height=120,
+            margin=dict(l=0, r=0, t=0, b=0),
+            xaxis_title="Price ($)",
+            barmode="overlay",
+            showlegend=True,
+            legend=dict(orientation="h", y=-0.4),
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -558,19 +653,25 @@ def render_valuation_page(make, model_name):
     if not depreciation["reliable"]:
         st.warning("Depreciation estimates may be unreliable for this vehicle.")
 
-    dep_data = pd.DataFrame({
-        "Scenario": ["Current", "+10,000 km / +1 yr", "Parked / +1 yr"],
-        "Value": [estimate, depreciation["value_10k"], depreciation["value_0k"]],
-    })
+    dep_data = pd.DataFrame(
+        {
+            "Scenario": ["Current", "+10,000 km / +1 yr", "Parked / +1 yr"],
+            "Value": [estimate, depreciation["value_10k"], depreciation["value_0k"]],
+        }
+    )
     fig_dep = px.bar(
-        dep_data, x="Scenario", y="Value",
+        dep_data,
+        x="Scenario",
+        y="Value",
         text=dep_data["Value"].apply(lambda v: f"${v:,.0f}"),
         color="Scenario",
         color_discrete_sequence=["#636EFA", "#EF553B", "#00CC96"],
     )
     fig_dep.update_layout(
-        showlegend=False, yaxis_title="Estimated Value ($)",
-        height=350, margin=dict(t=10),
+        showlegend=False,
+        yaxis_title="Estimated Value ($)",
+        height=350,
+        margin=dict(t=10),
     )
     fig_dep.update_traces(textposition="outside")
     st.plotly_chart(fig_dep, use_container_width=True)
@@ -580,8 +681,16 @@ def render_valuation_page(make, model_name):
     if comparison_region and comparison_region != region:
         st.markdown("#### Regional Comparison")
         comparison_data_point = build_data_point(
-            comparison_region, engine_size, odometer, year, fuel_type, transmission,
-            cylinder, colour_label, stereo_label, is4Wd,
+            comparison_region,
+            engine_size,
+            odometer,
+            year,
+            fuel_type,
+            transmission,
+            cylinder,
+            colour_label,
+            stereo_label,
+            is4Wd,
         )
         comparison_price = predictor.predict(comparison_data_point).iloc[0]
         delta = comparison_price - estimate
@@ -630,7 +739,9 @@ def render_diagnostics_page(make, model_name):
     fi = get_feature_importance(model_path, make, model_name)
     fi_sorted = fi.sort_values("importance", ascending=True)
     fig_fi = px.bar(
-        fi_sorted, x="importance", y=fi_sorted.index,
+        fi_sorted,
+        x="importance",
+        y=fi_sorted.index,
         orientation="h",
         error_x="stddev" if "stddev" in fi_sorted.columns else None,
         labels={"importance": "Importance", "index": "Feature"},
@@ -654,24 +765,33 @@ def render_diagnostics_page(make, model_name):
 
     # Predicted vs Actual scatter
     st.markdown("#### Predicted vs Actual")
-    scatter_df = pd.DataFrame({
-        "Actual": actuals.values,
-        "Predicted": preds.values,
-        "Residual": np.abs(residuals),
-    })
+    scatter_df = pd.DataFrame(
+        {
+            "Actual": actuals.values,
+            "Predicted": preds.values,
+            "Residual": np.abs(residuals),
+        }
+    )
     fig_pva = px.scatter(
-        scatter_df, x="Actual", y="Predicted", color="Residual",
+        scatter_df,
+        x="Actual",
+        y="Predicted",
+        color="Residual",
         color_continuous_scale="RdYlGn_r",
         labels={"Residual": "|Residual|"},
     )
     # y=x reference line
     xy_min = min(scatter_df["Actual"].min(), scatter_df["Predicted"].min())
     xy_max = max(scatter_df["Actual"].max(), scatter_df["Predicted"].max())
-    fig_pva.add_trace(go.Scatter(
-        x=[xy_min, xy_max], y=[xy_min, xy_max],
-        mode="lines", line=dict(dash="dash", color="grey"),
-        showlegend=False,
-    ))
+    fig_pva.add_trace(
+        go.Scatter(
+            x=[xy_min, xy_max],
+            y=[xy_min, xy_max],
+            mode="lines",
+            line=dict(dash="dash", color="grey"),
+            showlegend=False,
+        )
+    )
     fig_pva.update_layout(height=450, margin=dict(t=10))
     st.plotly_chart(fig_pva, use_container_width=True)
 
@@ -681,7 +801,8 @@ def render_diagnostics_page(make, model_name):
     with c1:
         st.markdown("#### Residuals Distribution")
         fig_hist = px.histogram(
-            x=residuals, nbins=30,
+            x=residuals,
+            nbins=30,
             labels={"x": "Actual − Predicted ($)"},
         )
         fig_hist.add_vline(x=0, line_dash="dash", line_color="red")
@@ -691,7 +812,8 @@ def render_diagnostics_page(make, model_name):
     with c2:
         st.markdown("#### Residuals vs Predicted")
         fig_rvp = px.scatter(
-            x=preds.values, y=residuals,
+            x=preds.values,
+            y=residuals,
             labels={"x": "Predicted ($)", "y": "Residual ($)"},
         )
         fig_rvp.add_hline(y=0, line_dash="dash", line_color="red")
@@ -728,21 +850,31 @@ def render_market_page(make, model_name):
     q25, q50, q75 = prices.quantile([0.25, 0.5, 0.75])
     fig_price = px.histogram(data, x="price", nbins=40, labels={"price": "Price ($)"})
     for val, label, color in [
-        (q25, "Q25", "orange"), (q50, "Median", "red"), (q75, "Q75", "orange")
+        (q25, "Q25", "orange"),
+        (q50, "Median", "red"),
+        (q75, "Q75", "orange"),
     ]:
-        fig_price.add_vline(x=val, line_dash="dash", line_color=color,
-                            annotation_text=f"{label}: ${val:,.0f}")
+        fig_price.add_vline(
+            x=val,
+            line_dash="dash",
+            line_color=color,
+            annotation_text=f"{label}: ${val:,.0f}",
+        )
     fig_price.update_layout(height=350, margin=dict(t=30), showlegend=False)
     st.plotly_chart(fig_price, use_container_width=True)
 
     # Price by Year
     if "Year" in data.columns:
         st.markdown("#### Price by Year")
-        chart_type = st.radio("Chart type", ["Box", "Scatter"], horizontal=True, key="yr_type")
+        chart_type = st.radio(
+            "Chart type", ["Box", "Scatter"], horizontal=True, key="yr_type"
+        )
         if chart_type == "Box":
             fig_yr = px.box(data, x="Year", y="price", labels={"price": "Price ($)"})
         else:
-            fig_yr = px.scatter(data, x="Year", y="price", opacity=0.5, labels={"price": "Price ($)"})
+            fig_yr = px.scatter(
+                data, x="Year", y="price", opacity=0.5, labels={"price": "Price ($)"}
+            )
         fig_yr.update_layout(height=400, margin=dict(t=10))
         st.plotly_chart(fig_yr, use_container_width=True)
 
@@ -750,8 +882,12 @@ def render_market_page(make, model_name):
     if "Odometer" in data.columns:
         st.markdown("#### Price by Odometer")
         fig_odo = px.scatter(
-            data, x="Odometer", y="price", opacity=0.4,
-            trendline="lowess", labels={"price": "Price ($)", "Odometer": "Odometer (km)"},
+            data,
+            x="Odometer",
+            y="price",
+            opacity=0.4,
+            trendline="lowess",
+            labels={"price": "Price ($)", "Odometer": "Odometer (km)"},
         )
         fig_odo.update_layout(height=400, margin=dict(t=10))
         st.plotly_chart(fig_odo, use_container_width=True)
@@ -759,9 +895,16 @@ def render_market_page(make, model_name):
     # Price by Region
     if "Region" in data.columns:
         st.markdown("#### Price by Region")
-        region_order = data.groupby("Region")["price"].median().sort_values(ascending=False).index.tolist()
+        region_order = (
+            data.groupby("Region")["price"]
+            .median()
+            .sort_values(ascending=False)
+            .index.tolist()
+        )
         fig_reg = px.box(
-            data, x="Region", y="price",
+            data,
+            x="Region",
+            y="price",
             category_orders={"Region": region_order},
             labels={"price": "Price ($)"},
         )
@@ -770,14 +913,19 @@ def render_market_page(make, model_name):
 
     # Category distributions
     st.markdown("#### Category Distributions")
-    cat_cols = [c for c in ["Region", "Fuel", "Transmission", "colour_label", "stereo_label"] if c in data.columns]
+    cat_cols = [
+        c
+        for c in ["Region", "Fuel", "Transmission", "colour_label", "stereo_label"]
+        if c in data.columns
+    ]
     if cat_cols:
         cols = st.columns(min(len(cat_cols), 3))
         for i, col_name in enumerate(cat_cols):
             with cols[i % len(cols)]:
                 counts = data[col_name].value_counts()
                 fig_bar = px.bar(
-                    x=counts.index, y=counts.values,
+                    x=counts.index,
+                    y=counts.values,
                     labels={"x": col_name, "y": "Count"},
                 )
                 fig_bar.update_layout(height=300, margin=dict(t=10), showlegend=False)
@@ -793,8 +941,16 @@ def render_market_page(make, model_name):
         tc1, tc2, tc3 = st.columns(3)
         tc1.metric("Q25 Boundary", f"${tail_info['q25']:,.0f}")
         tc2.metric("Q75 Boundary", f"${tail_info['q75']:,.0f}")
-        low_status = f"Yes (n={tail_info.get('low_n', '?')})" if tail_info.get("low_model") else f"No (n={tail_info.get('low_n', '?')})"
-        high_status = f"Yes (n={tail_info.get('high_n', '?')})" if tail_info.get("high_model") else f"No (n={tail_info.get('high_n', '?')})"
+        low_status = (
+            f"Yes (n={tail_info.get('low_n', '?')})"
+            if tail_info.get("low_model")
+            else f"No (n={tail_info.get('low_n', '?')})"
+        )
+        high_status = (
+            f"Yes (n={tail_info.get('high_n', '?')})"
+            if tail_info.get("high_model")
+            else f"No (n={tail_info.get('high_n', '?')})"
+        )
         tc1.caption(f"Low tail model: {low_status}")
         tc3.caption(f"High tail model: {high_status}")
 
@@ -821,7 +977,9 @@ def render_undervalued_page():
                 for mdl in models:
                     all_cars.append(f"{mk} {mdl}")
             selected_cars = st.multiselect(
-                "Cars to search", all_cars, default=all_cars,
+                "Cars to search",
+                all_cars,
+                default=all_cars,
             )
 
         with col2:
@@ -849,7 +1007,11 @@ def render_undervalued_page():
                 text=f"Searching {mk} {mdl}...",
             )
             result = find_undervalued(
-                mk, mdl, min_disc, max_disc, filters=None,
+                mk,
+                mdl,
+                min_disc,
+                max_disc,
+                filters=None,
                 comparison_region=comparison_region or None,
             )
             if result is not None and len(result) > 0:
@@ -880,7 +1042,9 @@ def render_undervalued_page():
     fc1, fc2, fc3 = st.columns(3)
 
     odo_min = int(combined["Odometer"].min()) if "Odometer" in combined.columns else 0
-    odo_max = int(combined["Odometer"].max()) if "Odometer" in combined.columns else 300000
+    odo_max = (
+        int(combined["Odometer"].max()) if "Odometer" in combined.columns else 300000
+    )
     age_min = int(combined["Age"].min()) if "Age" in combined.columns else 0
     age_max = int(combined["Age"].max()) if "Age" in combined.columns else 30
     price_min = int(combined["prediction_label"].min())
@@ -888,34 +1052,45 @@ def render_undervalued_page():
 
     with fc1:
         odo_range = st.slider(
-            "Odometer (km)", odo_min, odo_max, (odo_min, odo_max),
-            step=10000, key="uv_odo_filter",
+            "Odometer (km)",
+            odo_min,
+            odo_max,
+            (odo_min, odo_max),
+            step=10000,
+            key="uv_odo_filter",
         )
     with fc2:
         age_range = st.slider(
-            "Age (years)", age_min, age_max, (age_min, age_max),
-            step=1, key="uv_age_filter",
+            "Age (years)",
+            age_min,
+            age_max,
+            (age_min, age_max),
+            step=1,
+            key="uv_age_filter",
         )
     with fc3:
         price_range = st.slider(
-            "Est. Price ($)", price_min, price_max, (price_min, price_max),
-            step=1000, key="uv_price_filter",
+            "Est. Price ($)",
+            price_min,
+            price_max,
+            (price_min, price_max),
+            step=1000,
+            key="uv_price_filter",
         )
 
     filtered = combined.copy()
     if "Odometer" in filtered.columns:
         filtered = filtered[
-            (filtered["Odometer"] >= odo_range[0]) &
-            (filtered["Odometer"] <= odo_range[1])
+            (filtered["Odometer"] >= odo_range[0])
+            & (filtered["Odometer"] <= odo_range[1])
         ]
     if "Age" in filtered.columns:
         filtered = filtered[
-            (filtered["Age"] >= age_range[0]) &
-            (filtered["Age"] <= age_range[1])
+            (filtered["Age"] >= age_range[0]) & (filtered["Age"] <= age_range[1])
         ]
     filtered = filtered[
-        (filtered["prediction_label"] >= price_range[0]) &
-        (filtered["prediction_label"] <= price_range[1])
+        (filtered["prediction_label"] >= price_range[0])
+        & (filtered["prediction_label"] <= price_range[1])
     ]
 
     # Summary stats
@@ -967,7 +1142,9 @@ def render_undervalued_page():
         "discount_pct": st.column_config.NumberColumn("Discount %", format="%.1f%%"),
     }
     if "URL" in display.columns:
-        column_config["URL"] = st.column_config.LinkColumn("Listing", display_text="View")
+        column_config["URL"] = st.column_config.LinkColumn(
+            "Listing", display_text="View"
+        )
     if "comparison_value" in display.columns:
         column_config["comparison_value"] = st.column_config.NumberColumn(
             f"{comparison_region} Value", format="$%d"
@@ -1022,9 +1199,14 @@ def main():
             st.caption(f"Samples: {meta.get('n_training_samples', '?')}")
 
     # Tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Valuation", "Model Diagnostics", "Market Overview", "Undervalued Finder",
-    ])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        [
+            "Valuation",
+            "Model Diagnostics",
+            "Market Overview",
+            "Undervalued Finder",
+        ]
+    )
 
     with tab1:
         render_valuation_page(selected_make, selected_model)

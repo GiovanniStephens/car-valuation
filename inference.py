@@ -12,13 +12,17 @@ This module handles prediction and valuation:
 import os
 import pickle
 import pandas as pd
-import numpy as np
 import yaml
 from yaml.loader import SafeLoader
 from autogluon.tabular import TabularPredictor
 from fuzzywuzzy import process
 
-from utils import load_config, load_model_metadata, get_model_path, get_quantile_model_path
+from utils import (
+    load_config,
+    load_model_metadata,
+    get_model_path,
+    get_quantile_model_path,
+)
 
 
 def predict_blended(data_point: pd.DataFrame, make: str, model_name: str) -> float:
@@ -323,9 +327,9 @@ def run_interactive_valuation() -> None:
     car_make = config["make"]
     car_model = config["model"]
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Car Valuation Tool - {car_make} {car_model}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     print("Loading models...")
     model_path = get_model_path(car_make, car_model)
@@ -334,11 +338,24 @@ def run_interactive_valuation() -> None:
     print("Models loaded.\n")
 
     regions = [
-        "Auckland", "Bay of Plenty", "Canterbury", "Gisborne",
-        "Hawke's Bay", "Manawatu", "Marlborough", "Nelson Bays",
-        "Northland", "Otago", "Southland", "Taranaki",
-        "Timaru - Oamaru", "Waikato", "Wairarapa", "Wellington",
-        "West Coast", "Whanganui",
+        "Auckland",
+        "Bay of Plenty",
+        "Canterbury",
+        "Gisborne",
+        "Hawke's Bay",
+        "Manawatu",
+        "Marlborough",
+        "Nelson Bays",
+        "Northland",
+        "Otago",
+        "Southland",
+        "Taranaki",
+        "Timaru - Oamaru",
+        "Waikato",
+        "Wairarapa",
+        "Wellington",
+        "West Coast",
+        "Whanganui",
     ]
     fuel_types = ["Petrol", "Diesel", "Electric", "Hybrid"]
     transmissions = ["Automatic", "Manual"]
@@ -380,7 +397,8 @@ def run_interactive_valuation() -> None:
         cylinder = int(
             get_input_with_match(
                 f"Cylinders ({'/'.join(map(str, cylinders))}): ",
-                cylinders, threshold=0,
+                cylinders,
+                threshold=0,
             )
         )
         exterior_colour = input("Exterior colour: ").strip() or "Unknown"
@@ -390,17 +408,23 @@ def run_interactive_valuation() -> None:
 
         print("\nProcessing...")
         colour_label = classify_colour(
-            pd.DataFrame({"ExteriorColour": [exterior_colour]}), embedding_model,
-            car_make, car_model,
+            pd.DataFrame({"ExteriorColour": [exterior_colour]}), embedding_model
         ).iloc[0]["colour_label"]
         stereo_label = classify_stereo(
-            pd.DataFrame({"StereoDescription": [stereo_description]}), embedding_model,
-            car_make, car_model,
+            pd.DataFrame({"StereoDescription": [stereo_description]}), embedding_model
         ).iloc[0]["stereo_label"]
 
         data_point = build_data_point(
-            region, engine_size, odometer, year, fuel_type, transmission,
-            cylinder, colour_label, stereo_label, is_4wd,
+            region,
+            engine_size,
+            odometer,
+            year,
+            fuel_type,
+            transmission,
+            cylinder,
+            colour_label,
+            stereo_label,
+            is_4wd,
         )
 
         predicted_price = predictor.predict(data_point).iloc[0]
@@ -416,9 +440,13 @@ def run_interactive_valuation() -> None:
         # Confidence intervals if quantile model exists
         result = predict_with_confidence(data_point, car_make, car_model)
         if "ci_80" in result:
-            print(f"  80% Confidence:  ${result['ci_80'][0]:,.0f} - ${result['ci_80'][1]:,.0f}")
+            print(
+                f"  80% Confidence:  ${result['ci_80'][0]:,.0f} - ${result['ci_80'][1]:,.0f}"
+            )
         if "ci_50" in result:
-            print(f"  50% Confidence:  ${result['ci_50'][0]:,.0f} - ${result['ci_50'][1]:,.0f}")
+            print(
+                f"  50% Confidence:  ${result['ci_50'][0]:,.0f} - ${result['ci_50'][1]:,.0f}"
+            )
         if result.get("tail"):
             print(f"  (Tail-adjusted: {result['tail']} end)")
 
@@ -450,9 +478,9 @@ def value_car(config_file: str = "car_to_value.yml") -> None:
     car_model = car_specs["model"]
     config = load_config()
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Car Valuation - {car_make} {car_model}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     # Load AutoGluon model
     model_path = get_model_path(car_make, car_model)
@@ -490,17 +518,23 @@ def value_car(config_file: str = "car_to_value.yml") -> None:
     # Classify colour and stereo
     print("Processing...")
     colour_label = classify_colour(
-        pd.DataFrame({"ExteriorColour": [exterior_colour]}), embedding_model,
-        car_make, car_model,
+        pd.DataFrame({"ExteriorColour": [exterior_colour]}), embedding_model
     ).iloc[0]["colour_label"]
     stereo_label = classify_stereo(
-        pd.DataFrame({"StereoDescription": [stereo_description]}), embedding_model,
-        car_make, car_model,
+        pd.DataFrame({"StereoDescription": [stereo_description]}), embedding_model
     ).iloc[0]["stereo_label"]
 
     data_point = build_data_point(
-        region, engine_size, odometer, year, fuel_type, transmission,
-        cylinder, colour_label, stereo_label, is_4wd,
+        region,
+        engine_size,
+        odometer,
+        year,
+        fuel_type,
+        transmission,
+        cylinder,
+        colour_label,
+        stereo_label,
+        is_4wd,
     )
 
     # Point estimate
@@ -520,9 +554,13 @@ def value_car(config_file: str = "car_to_value.yml") -> None:
     print(f"\n  Estimated Value: ${result['estimate']:,.0f}")
 
     if "ci_80" in result:
-        print(f"  80% Confidence:  ${result['ci_80'][0]:,.0f} - ${result['ci_80'][1]:,.0f}")
+        print(
+            f"  80% Confidence:  ${result['ci_80'][0]:,.0f} - ${result['ci_80'][1]:,.0f}"
+        )
     if "ci_50" in result:
-        print(f"  50% Confidence:  ${result['ci_50'][0]:,.0f} - ${result['ci_50'][1]:,.0f}")
+        print(
+            f"  50% Confidence:  ${result['ci_50'][0]:,.0f} - ${result['ci_50'][1]:,.0f}"
+        )
     if result.get("tail"):
         print(f"  (Tail-adjusted: {result['tail']} end)")
 
@@ -532,8 +570,16 @@ def value_car(config_file: str = "car_to_value.yml") -> None:
     comparison_region = car_specs.get("comparison_region")
     if comparison_region and comparison_region != region:
         comparison_data_point = build_data_point(
-            comparison_region, engine_size, odometer, year, fuel_type, transmission,
-            cylinder, colour_label, stereo_label, is_4wd,
+            comparison_region,
+            engine_size,
+            odometer,
+            year,
+            fuel_type,
+            transmission,
+            cylinder,
+            colour_label,
+            stereo_label,
+            is_4wd,
         )
         comparison_price = predictor.predict(comparison_data_point).iloc[0]
         price_diff = comparison_price - predicted_price
@@ -545,9 +591,13 @@ def value_car(config_file: str = "car_to_value.yml") -> None:
         print(f"  Value in {region}:           ${predicted_price:,.0f}")
         print(f"  Value in {comparison_region}:              ${comparison_price:,.0f}")
         if price_diff >= 0:
-            print(f"  Difference:                  +${price_diff:,.0f} (+{price_diff_pct:.1f}%)")
+            print(
+                f"  Difference:                  +${price_diff:,.0f} (+{price_diff_pct:.1f}%)"
+            )
         else:
-            print(f"  Difference:                  -${-price_diff:,.0f} ({price_diff_pct:.1f}%)")
+            print(
+                f"  Difference:                  -${-price_diff:,.0f} ({price_diff_pct:.1f}%)"
+            )
         print("-" * 50)
 
     # Calculate and display depreciation
@@ -568,9 +618,11 @@ def value_car(config_file: str = "car_to_value.yml") -> None:
 
     def fmt_dep(dep, val):
         if dep >= 0:
-            return f"-${dep:,.0f} ({dep/predicted_price*100:.1f}%)  -> ${val:,.0f}"
+            return f"-${dep:,.0f} ({dep / predicted_price * 100:.1f}%)  -> ${val:,.0f}"
         else:
-            return f"+${-dep:,.0f} ({-dep/predicted_price*100:.1f}%)  -> ${val:,.0f}"
+            return (
+                f"+${-dep:,.0f} ({-dep / predicted_price * 100:.1f}%)  -> ${val:,.0f}"
+            )
 
     print(f"  With 10,000 km travel:  {fmt_dep(dep_10k, val_10k)}")
     print(f"  With minimal travel:    {fmt_dep(dep_0k, val_0k)}")
