@@ -1,0 +1,20 @@
+# CAR TO VALUE - 2006 Toyota RAV4
+
+make: 'Toyota'
+model: 'Rav4'
+
+region: 'Canterbury'
+comparison_region: 'Auckland'
+
+year: 2006
+engine_size: '2.4L'
+odometer: 143000
+
+fuel_type: 'Petrol'
+transmission: 'Automatic'
+cylinders: 4
+
+exterior_colour: 'White'
+stereo_description: 'Reverse Camera'
+
+is_4wd: true

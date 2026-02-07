@@ -1,0 +1,54 @@
+# =============================================================================
+# UNDERVALUED CAR SEARCH CONFIG
+# =============================================================================
+# Search for undervalued cars across multiple makes/models.
+# Run: python find_undervalued.py
+# =============================================================================
+
+# Minimum discount as percentage (e.g., 40 = 40% below estimated value)
+minimum_discount_percent: 40
+
+# Maximum discount as percentage (to filter out suspiciously cheap listings)
+maximum_discount_percent: 80
+
+# Cars to search
+cars:
+  - make: Toyota
+    model: Corolla
+  - make: Toyota
+    model: Blade
+  - make: Toyota
+    model: Caldina
+  - make: Toyota
+    model: Rav4
+  - make: Toyota
+    model: Vitz
+  - make: Toyota
+    model: Aqua
+  - make: Subaru
+    model: Legacy
+  - make: Subaru
+    model: Outback
+  - make: Subaru
+    model: XV
+  - make: Honda
+    model: Fit
+  - make: Mitsubishi
+    model: Colt
+  - make: Mazda
+    model: Demio
+
+# Optional: Compare valuations against another region to see geographic price differences
+# This shows what the car would be worth if listed in the comparison region
+comparison_region: Otago
+
+# Optional filters applied to results (applied after undervalued filtering)
+filters:
+  - name: High mileage only
+    column: Odometer
+    operator: '<='
+    value: 160000
+  - name: Specific region
+    column: Region
+    operator: '=='
+    value: 'Canterbury'

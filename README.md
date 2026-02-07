@@ -1,92 +1,124 @@
-# Valuation Model
+# Car Valuation
 
-This repository contains a Python script for a valuation model using the PyCaret library. The model is a Random Forest regression model, which is trained, tuned, and finalized on a given dataset. The model is then used to make predictions on out-of-sample data and a specific data point.
+Machine learning-based car valuation system using TradeMe NZ listings data.
 
-## Code Overview
+## Project Structure
 
-The script begins by setting up a regression model with specific parameters. The target variable is 'price' and the training data size is set to 80% of the total data. The model does not normalize the data, apply any transformations, or remove outliers. The data is shuffled before splitting and the model uses a k-fold cross-validation strategy with 5 folds.
+### Core Modules
 
-```python
-regression = setup(data=data,
-                   target='price',
-                   train_size=0.8,
-                   session_id=42,
-                   normalize=False,
-                   transformation=False,
-                   transform_target=False,
-                   remove_outliers=False,
-                   outliers_threshold=0.05,
-                   data_split_shuffle=True,
-                   fold_strategy='kfold',
-                   fold=5,
-                   fold_shuffle=True,
-                   fold_groups=None,
-                   n_jobs=-1,
-                   use_gpu=False,
-                   custom_pipeline=None)
-```
+| Module | Description |
+|--------|-------------|
+| `feature_engineering.py` | Transform raw data into model features (colour/stereo classification, derived features) |
+| `training.py` | Train AutoGluon models (main, quantile, tail) |
+| `inference.py` | Make predictions and valuations (blending, confidence intervals, depreciation) |
+| `utils.py` | Shared utilities (config loading, data fetching, model metadata, filters) |
 
-A Random Forest model is created, tuned, and finalized. The finalized model is saved as 'final_rf_model'.
+### Entry Points (Scripts)
 
-```python
-rf = create_model('rf')
-tuned_rf = tune_model(rf)
-final_rf = finalize_model(tuned_rf)
-save_model(final_rf, 'final_rf_model')
-```
+| Script | Description | Usage |
+|--------|-------------|-------|
+| `value_car.py` | Single car: fetch data → train → value | `python value_car.py` |
+| `find_undervalued.py` | Batch search for undervalued cars | `python find_undervalued.py [--fetch] [--train]` |
+| `dashboard.py` | Interactive web UI (Streamlit) | `streamlit run dashboard.py` |
+| `train_general_model.py` | Train cross-car general model | `python train_general_model.py` |
+| `valuation_model.py` | CLI for training/valuation | `python valuation_model.py [value\|interactive]` |
 
-The model is used to make predictions on out-of-sample data and a specific data point (TradeMe listing ID defined in the config). The predictions are printed to the console.
+### Config Files
 
-```python
-predictions = predict_model(final_rf, data=out_of_sample)
-valuation = predict_model(final_rf, data=data_point_to_valuate)
-print(valuation)
-```
+| File | Description |
+|------|-------------|
+| `model_settings.yml` | Training hyperparameters, embedding model, general model settings |
+| `car_search.yml` | Make/model for single-car operations |
+| `car_to_value.yml` | Specific car specs to value |
+| `undervalued_search.yml` | Multi-car batch search config |
 
-Finally, a residuals plot of the model is generated.
+## Quick Start
+
+### 1. Set up TradeMe API credentials
 
 ```python
-plot_model(final_rf, plot='residuals')
+import keyring
+keyring.set_password("Trademe", "key", "YOUR_CONSUMER_KEY")
+keyring.set_password("Trademe", "secret", "YOUR_CONSUMER_SECRET")
 ```
 
-## Requirements
+### 2. Configure your car
 
-- Python 3.6+
-- PyCaret
-- Pandas
-- Umap-learn
-- hdbscan
-- sentence-transformers
-- requests_oauthlib
-- keyring
+Edit `car_to_value.yml`:
 
-## Usage
+```yaml
+make: Toyota
+model: Rav4
+region: Auckland
+year: 2018
+engine_size: 2.5L
+odometer: 80000
+fuel_type: Petrol
+transmission: Automatic
+cylinders: 4
+is_4wd: true
+```
 
-1. Clone the repository.
-2. Install the requirements.
-3. Run the `valuation_model.py` script.
-
-# get_data Module
-
-The `get_data` module is responsible for fetching and preparing the data that will be used by the valuation model. 
-
-## Overview
-
-This module contains functions to load the data from a specified source, clean the data by handling missing values and outliers, and preprocess the data by performing necessary transformations and encoding categorical variables.
-
-## Usage
-
-To use this module, run the module as a script with the following command:
+### 3. Run valuation
 
 ```bash
-python get_data.py
+python value_car.py
 ```
 
-The saved Pickle data can then be used as input to the valuation model.
+This will:
+1. Fetch data from TradeMe (if not already present)
+2. Train a model (if not already trained)
+3. Output the valuation with confidence intervals
 
-## Requirements
+### 4. Launch the dashboard
 
-This module requires the following Python packages:
+```bash
+streamlit run dashboard.py
+```
 
-- pandas
-- numpy
+## Architecture
+
+### Model Types
+
+- **Car-specific model**: AutoGluon ensemble trained on one make/model
+- **Quantile model**: Provides confidence intervals (10th, 25th, 50th, 75th, 90th percentiles)
+- **Tail models**: Ridge regression for extreme values (low/high price tails)
+- **General model**: Cross-car-type model for blending when data is limited
+
+### Blending Strategy
+
+When making predictions, the system blends car-specific and general models:
+- n < 50 samples: General model only
+- 50 ≤ n < 200: Linear blend
+- n ≥ 200: Car-specific only
+
+### Feature Engineering
+
+Raw data is transformed with:
+- Colour/stereo classification via sentence embeddings + PyCaret classifiers
+- Derived features: `Age = 2026 - Year`, `KmPerYear = Odometer / max(Age, 1)`
+- Categorical columns kept as strings (AutoGluon handles them natively)
+
+## Model Storage
+
+```
+models/
+├── Toyota_Rav4/              # Car-specific model
+│   ├── predictor.pkl
+│   ├── metadata.yml
+│   ├── tail_info.pkl
+│   └── ...
+├── Toyota_Rav4_quantile/     # Quantile model
+│   └── ...
+└── general_model/            # Cross-car-type model
+    └── ...
+```
+
+## Dependencies
+
+Key packages:
+- `autogluon` - AutoML framework
+- `pycaret` - For colour/stereo classifiers
+- `sentence-transformers` - Text embeddings
+- `streamlit` - Dashboard UI
+- `requests-oauthlib` - TradeMe API

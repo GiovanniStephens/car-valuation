@@ -1,0 +1,60 @@
+# =============================================================================
+# MODEL SETTINGS (ADVANCED)
+# =============================================================================
+# These settings control how the machine learning model works.
+# You probably don't need to change these unless you're debugging the model.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# TEXT EMBEDDING MODEL
+# -----------------------------------------------------------------------------
+# Used to convert colour and stereo descriptions into numbers the model can use.
+# This is a pre-trained model from Hugging Face.
+
+text_embedding_model: 'paraphrase-MiniLM-L6-v2'
+
+# -----------------------------------------------------------------------------
+# TRAINING CONFIGURATION
+# -----------------------------------------------------------------------------
+# Settings for AutoGluon model training.
+
+training:
+  backend: 'autogluon'
+  preset: 'best_quality'
+  time_limit: 600              # Seconds per training run
+  eval_metric: 'mean_absolute_error'
+  num_bag_folds: 5
+
+# -----------------------------------------------------------------------------
+# GENERAL CROSS-CAR-TYPE MODEL
+# -----------------------------------------------------------------------------
+# A model trained on all car types combined, used for blending with car-specific
+# models when the car-specific training set is small.
+
+general_model:
+  enabled: true
+  blend_threshold_min: 50      # Below this, use general model only
+  blend_threshold_max: 200     # Above this, use car-specific only
+  time_limit: 1800             # More time for larger combined dataset
+
+# -----------------------------------------------------------------------------
+# FEATURES USED BY THE MODEL
+# -----------------------------------------------------------------------------
+# These columns are extracted from the raw data and used for predictions.
+# Only change this if you have different data columns available.
+
+features:
+  - 'ListingId'         # Needed for tracking, removed before training
+  - 'Region'
+  - 'EngineSize'
+  - 'Odometer'
+  - 'Year'
+  - 'Transmission'
+  - 'Fuel'
+  - 'Cylinders'
+  - 'ExteriorColour'
+  - 'StereoDescription'
+  - 'Is4WD'
+  - 'IsNew'
+  - 'IsDealer'
+  - 'price'             # This is what we're predicting

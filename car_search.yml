@@ -1,0 +1,6 @@
+make: Toyota
+model: Rav4
+minimum_discount: 5000
+maximum_discount: 100000
+filters: []
+listing_id_to_valuate: null
