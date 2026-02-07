@@ -161,5 +161,4 @@ cython_debug/
 
 data/
 models/
-reports/
 logs/
