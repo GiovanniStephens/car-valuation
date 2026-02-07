@@ -71,7 +71,8 @@ EXTRACTION_PROMPT = """Extract car listing details from Facebook Marketplace pos
 Guidelines:
 - Convert engine sizes to cc (e.g., 2.4L = 2400, 1.5L = 1500)
 - Convert miles to km if needed (miles * 1.609)
-- NZ regions: Auckland, Bay of Plenty, Canterbury, Gisborne, Hawke's Bay, Manawatu, Marlborough, Nelson Bays, Northland, Otago, Southland, Taranaki, Timaru - Oamaru, Waikato, Wairarapa, Wellington, West Coast, Whanganui
+- NZ regions: Auckland, Bay of Plenty, Canterbury, Gisborne, Hawke's Bay, Manawatu, Marlborough, Nelson Bays, Northland,
+Otago, Southland, Taranaki, Timaru - Oamaru, Waikato, Wairarapa, Wellington, West Coast, Whanganui
 - For Japanese imports, make educated guesses about fuel type if not specified
 - If year is ambiguous (e.g., "15 model"), interpret as 2015
 - Set confidence to "low" if critical fields (make, model, year, odometer) are missing or uncertain"""
