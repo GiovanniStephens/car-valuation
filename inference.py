@@ -11,11 +11,17 @@ This module handles prediction and valuation:
 
 import os
 import pickle
+from typing import TYPE_CHECKING
+
 import pandas as pd
 import yaml
 from yaml.loader import SafeLoader
-from autogluon.tabular import TabularPredictor
 from fuzzywuzzy import process
+
+from model_cache import get_predictor
+
+if TYPE_CHECKING:
+    from autogluon.tabular import TabularPredictor
 
 from utils import (
     load_config,
@@ -51,7 +57,7 @@ def predict_blended(data_point: pd.DataFrame, make: str, model_name: str) -> flo
     if not general_config.get("enabled", False):
         # General model disabled -- use car-specific only
         specific_path = get_model_path(make, model_name)
-        predictor = TabularPredictor.load(specific_path)
+        predictor = get_predictor(specific_path)
         return predictor.predict(data_point).iloc[0]
 
     blend_min = general_config.get("blend_threshold_min", 50)
@@ -65,7 +71,7 @@ def predict_blended(data_point: pd.DataFrame, make: str, model_name: str) -> flo
     if os.path.isdir(specific_path):
         meta = load_model_metadata(specific_path)
         n_samples = meta.get("n_training_samples", 0)
-        predictor = TabularPredictor.load(specific_path)
+        predictor = get_predictor(specific_path)
         specific_pred = predictor.predict(data_point).iloc[0]
 
     # General model prediction
@@ -73,7 +79,7 @@ def predict_blended(data_point: pd.DataFrame, make: str, model_name: str) -> flo
     general_pred = None
 
     if os.path.isdir(general_path):
-        general_predictor = TabularPredictor.load(general_path)
+        general_predictor = get_predictor(general_path)
         general_data = data_point.copy()
         general_data["Make"] = make
         general_data["Model"] = model_name
@@ -124,7 +130,7 @@ def predict_with_confidence(
     # Quantile predictions for confidence intervals
     quantile_path = get_quantile_model_path(make, model_name)
     if os.path.isfile(os.path.join(quantile_path, "predictor.pkl")):
-        q_predictor = TabularPredictor.load(quantile_path)
+        q_predictor = get_predictor(quantile_path)
         q_preds = q_predictor.predict(data_point)
         if isinstance(q_preds, pd.DataFrame):
             result["ci_80"] = (q_preds.iloc[0, 0], q_preds.iloc[0, 4])  # 0.1, 0.9
@@ -161,7 +167,7 @@ def predict_with_confidence(
 
 
 def calculate_depreciation(
-    predictor: TabularPredictor, data_point: pd.DataFrame, predicted_price: float
+    predictor: "TabularPredictor", data_point: pd.DataFrame, predicted_price: float
 ) -> dict:
     """Calculate 12-month depreciation estimates using AutoGluon predictor.
 
@@ -213,7 +219,7 @@ def identify_undervalued_cars(
     data: pd.DataFrame,
     config: dict,
     listing_ids: pd.Series,
-    predictor: TabularPredictor,
+    predictor: "TabularPredictor",
 ) -> None:
     """Identify undervalued cars using AutoGluon predictions.
 
@@ -333,7 +339,7 @@ def run_interactive_valuation() -> None:
 
     print("Loading models...")
     model_path = get_model_path(car_make, car_model)
-    predictor = TabularPredictor.load(model_path)
+    predictor = get_predictor(model_path)
     embedding_model = SentenceTransformer(config["sentence_transformer"]["model"])
     print("Models loaded.\n")
 
@@ -489,7 +495,7 @@ def value_car(config_file: str = "car_to_value.yml") -> None:
         return
 
     print(f"Loading: {model_path}")
-    predictor = TabularPredictor.load(model_path)
+    predictor = get_predictor(model_path)
     print("Model type: AutoGluon ensemble")
 
     embedding_model = SentenceTransformer(config["sentence_transformer"]["model"])

@@ -5,9 +5,17 @@ This module handles transforming raw car listing data into features suitable
 for AutoGluon model training and prediction.
 """
 
+import os
+
 import pandas as pd
-from pycaret.regression import load_model, predict_model
 from sentence_transformers import SentenceTransformer
+
+from model_cache import get_predictor
+
+CLASSIFIER_PATHS = {
+    "colour": "models/colour_classifier",
+    "stereo": "models/stereo_classifier",
+}
 
 
 def classify_colour(
@@ -15,8 +23,9 @@ def classify_colour(
 ) -> pd.DataFrame:
     """Classify exterior colour descriptions into standardized labels.
 
-    Uses a general pre-trained PyCaret classifier with sentence embeddings to map
+    Uses a pre-trained AutoGluon classifier with sentence embeddings to map
     free-text colour descriptions to consistent labels (e.g., "White", "Black", "Silver").
+    Falls back to "Unknown" if the classifier is not available.
 
     Args:
         data: DataFrame with an "ExteriorColour" column containing colour descriptions.
@@ -25,14 +34,16 @@ def classify_colour(
     Returns:
         DataFrame with a new "colour_label" column containing classified colours.
     """
-    embeds = embedding_model.encode(data["ExteriorColour"].values)
-    classifier = load_model("models/colour_classifier_model")
-    prediction_data = pd.concat(
-        [data["ExteriorColour"].reset_index(drop=True), pd.DataFrame(embeds)], axis=1
-    )
-    predictions = predict_model(classifier, data=prediction_data)
     data = data.copy()
-    data["colour_label"] = predictions["prediction_label"]
+    classifier_path = CLASSIFIER_PATHS["colour"]
+    if not os.path.isdir(classifier_path):
+        data["colour_label"] = "Unknown"
+        return data
+
+    embeds = embedding_model.encode(data["ExteriorColour"].values)
+    predictor = get_predictor(classifier_path)
+    prediction_data = pd.DataFrame(embeds)
+    data["colour_label"] = predictor.predict(prediction_data).values
     return data
 
 
@@ -41,8 +52,9 @@ def classify_stereo(
 ) -> pd.DataFrame:
     """Classify stereo descriptions into standardized labels.
 
-    Uses a general pre-trained PyCaret classifier with sentence embeddings to map
+    Uses a pre-trained AutoGluon classifier with sentence embeddings to map
     free-text stereo descriptions to consistent labels (e.g., "Basic", "Premium").
+    Falls back to "Unknown" if the classifier is not available.
 
     Args:
         data: DataFrame with a "StereoDescription" column.
@@ -51,14 +63,16 @@ def classify_stereo(
     Returns:
         DataFrame with a new "stereo_label" column containing classified stereo types.
     """
-    embeds = embedding_model.encode(data["StereoDescription"].values)
-    classifier = load_model("models/stereo_classifier_model")
-    prediction_data = pd.concat(
-        [data["StereoDescription"].reset_index(drop=True), pd.DataFrame(embeds)], axis=1
-    )
-    predictions = predict_model(classifier, data=prediction_data)
     data = data.copy()
-    data["stereo_label"] = predictions["prediction_label"]
+    classifier_path = CLASSIFIER_PATHS["stereo"]
+    if not os.path.isdir(classifier_path):
+        data["stereo_label"] = "Unknown"
+        return data
+
+    embeds = embedding_model.encode(data["StereoDescription"].values)
+    predictor = get_predictor(classifier_path)
+    prediction_data = pd.DataFrame(embeds)
+    data["stereo_label"] = predictor.predict(prediction_data).values
     return data
 
 

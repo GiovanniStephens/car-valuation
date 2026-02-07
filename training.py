@@ -14,6 +14,8 @@ import pandas as pd
 from autogluon.tabular import TabularPredictor
 from sklearn.linear_model import Ridge
 
+from model_cache import clear_cache
+
 
 def train_autogluon(
     data: pd.DataFrame, model_path: str, training_config: dict
@@ -49,6 +51,7 @@ def train_autogluon(
         time_limit=time_limit,
         num_bag_folds=num_bag_folds,
     )
+    clear_cache()  # Invalidate any cached models at this path
     return predictor, len(data)
 
 
@@ -82,6 +85,7 @@ def train_quantile_model(
         presets="best_quality",
         time_limit=time_limit,
     )
+    clear_cache()  # Invalidate any cached models at this path
     return predictor
 
 
