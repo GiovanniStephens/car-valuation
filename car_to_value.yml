@@ -1,20 +1,20 @@
-# CAR TO VALUE - 2006 Toyota RAV4
+# CAR TO VALUE - 2014 Toyota Harrier Hybrid E-Four
 
-make: 'Toyota'
-model: 'Rav4'
+make: 'Subaru'
+model: 'Impreza'
 
 region: 'Canterbury'
 comparison_region: 'Auckland'
 
-year: 2006
-engine_size: '2.4L'
-odometer: 143000
+year: 2014
+engine_size: '2.5L'
+odometer: 80000
 
-fuel_type: 'Petrol'
+fuel_type: 'Hybrid'
 transmission: 'Automatic'
 cylinders: 4
 
 exterior_colour: 'White'
-stereo_description: 'Reverse Camera'
+stereo_description: 'Standard'
 
 is_4wd: true

@@ -38,6 +38,16 @@ general_model:
   time_limit: 1800             # More time for larger combined dataset
 
 # -----------------------------------------------------------------------------
+# OUTLIER FILTERING
+# -----------------------------------------------------------------------------
+# Removes data points where price is unusual given the car's features.
+# Uses Isolation Forest for multivariate outlier detection.
+
+outlier_filtering:
+  method: 'isolation_forest'   # 'isolation_forest' or 'none'
+  contamination: 0.05          # Expected proportion of outliers (5%)
+
+# -----------------------------------------------------------------------------
 # FEATURES USED BY THE MODEL
 # -----------------------------------------------------------------------------
 # These columns are extracted from the raw data and used for predictions.

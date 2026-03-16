@@ -61,6 +61,7 @@ def load_config() -> dict:
         "final_filters": search_config.get("filters", []),
         "sentence_transformer": {"model": model_config["text_embedding_model"]},
         "feature_engineering": {"columns_to_keep": model_config["features"]},
+        "outlier_filtering": model_config.get("outlier_filtering", {}),
     }
     return config
 

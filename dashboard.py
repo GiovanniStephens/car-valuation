@@ -147,7 +147,10 @@ def get_leaderboard(_pred_path, make, model_name):
     """Get AutoGluon leaderboard evaluated on OOS data."""
     predictor = load_predictor(_pred_path)
     _, oos = get_oos_split(make, model_name)
-    return predictor.leaderboard(data=oos, silent=True)
+    try:
+        return predictor.leaderboard(data=oos, silent=True)
+    except Exception:
+        return predictor.leaderboard(silent=True)
 
 
 @st.cache_data

@@ -1,5 +1,5 @@
-make: Toyota
-model: Rav4
+make: Subaru
+model: Impreza
 minimum_discount: 5000
 maximum_discount: 100000
 filters: []

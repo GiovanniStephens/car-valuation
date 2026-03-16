@@ -9,6 +9,7 @@ import os
 
 import pandas as pd
 from sentence_transformers import SentenceTransformer
+from sklearn.ensemble import IsolationForest
 
 from model_cache import get_predictor
 
@@ -76,6 +77,50 @@ def classify_stereo(
     return data
 
 
+def remove_outliers(data: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """Remove multivariate outliers using Isolation Forest.
+
+    Detects rows where the price is unusual given the car's features.
+    Categorical columns are temporarily encoded as integer codes for the
+    numeric-only Isolation Forest algorithm.
+
+    Args:
+        data: Feature-engineered DataFrame including a 'price' column.
+        config: Configuration dictionary with optional 'outlier_filtering' key.
+
+    Returns:
+        DataFrame with outlier rows removed.
+    """
+    outlier_cfg = config.get("outlier_filtering", {})
+    method = outlier_cfg.get("method", "isolation_forest")
+    if method == "none":
+        return data
+
+    contamination = outlier_cfg.get("contamination", 0.05)
+
+    # Build numeric matrix: encode categoricals temporarily via cat.codes
+    exclude_cols = {"ListingId"}
+    feature_cols = [c for c in data.columns if c not in exclude_cols]
+    numeric_data = data[feature_cols].copy()
+    for col in numeric_data.select_dtypes(include=["object", "category"]).columns:
+        numeric_data[col] = numeric_data[col].astype("category").cat.codes
+
+    iso = IsolationForest(contamination=contamination, random_state=42)
+    predictions = iso.fit_predict(numeric_data)
+    outlier_mask = predictions == -1
+
+    if outlier_mask.any():
+        removed = data[outlier_mask]
+        print(f"\n[Outlier Filter] Removing {outlier_mask.sum()} of {len(data)} rows "
+              f"({outlier_mask.sum() / len(data):.1%}):")
+        display_cols = ["Year", "Odometer", "price"]
+        display_cols = [c for c in display_cols if c in removed.columns]
+        print(removed[display_cols].to_string(index=False))
+        print()
+
+    return data[~outlier_mask].reset_index(drop=True)
+
+
 def feature_engineering(data: pd.DataFrame, config: dict) -> pd.DataFrame:
     """Prepare features for AutoGluon model training or prediction.
 
@@ -134,6 +179,10 @@ def feature_engineering(data: pd.DataFrame, config: dict) -> pd.DataFrame:
     ]:
         if col in data.columns:
             data[col] = data[col].astype(str)
+
+    # Outlier filtering (only during training, when price column exists)
+    if "price" in data.columns:
+        data = remove_outliers(data, config)
 
     return data
 
