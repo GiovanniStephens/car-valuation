@@ -5,6 +5,7 @@ Streamlit dashboard for car valuation models.
 Launch: streamlit run dashboard.py
 """
 
+import difflib
 import os
 
 # Disable tokenizer parallelism before any imports
@@ -369,18 +370,18 @@ def render_paste_listing_section():
                 "Run Valuation", disabled=not can_value, key="run_valuation_button"
             ):
                 # Determine which make/model to use for prediction
-                if specific_model_exists:
-                    pred_make, pred_model = next(
-                        (m, mdl)
-                        for m, mdl in available_models
-                        if m.lower() == make.lower() and mdl.lower() == model.lower()
-                    )
+                query = f"{make} {model}".lower()
+                model_strings = [f"{m} {mdl}".lower() for m, mdl in available_models]
+                fuzzy_matches = difflib.get_close_matches(
+                    query, model_strings, n=1, cutoff=0.5
+                )
+                if fuzzy_matches:
+                    idx = model_strings.index(fuzzy_matches[0])
+                    pred_make, pred_model = available_models[idx]
+                elif available_models:
+                    pred_make, pred_model = available_models[0]
                 else:
-                    pred_make, pred_model = (
-                        available_models[0]
-                        if available_models
-                        else ("General", "Model")
-                    )
+                    pred_make, pred_model = ("General", "Model")
 
                 model_settings = _load_yaml("model_settings.yml")
                 embedding_model = load_embedding_model(
