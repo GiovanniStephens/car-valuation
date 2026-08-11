@@ -15,6 +15,18 @@ import sys
 import yaml
 from yaml.loader import SafeLoader
 
+# fastai.tabular sets pandas' chained_assignment mode to 'raise' as an import side
+# effect (AutoGluon pulls it in for NeuralNetFastAI models mid-run), which turns the
+# benign chained assignment inside AutoGluon's XGBoost preprocessing into a hard
+# SettingWithCopyError. Import it up front and restore the pandas default.
+try:
+    import fastai.tabular.core  # noqa: F401
+    import pandas as _pd
+
+    _pd.set_option("mode.chained_assignment", "warn")
+except ImportError:
+    pass
+
 
 def load_car_to_value():
     """Load the car specifications from car_to_value.yml."""

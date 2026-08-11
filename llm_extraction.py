@@ -5,6 +5,7 @@ Uses Groq API with Llama 3.3 70B for structured extraction.
 """
 
 import json
+import os
 import re
 from typing import Literal, Optional
 
@@ -89,10 +90,10 @@ def get_groq_client():
     """
     from groq import Groq
 
-    api_key = keyring.get_password("Groq", "key")
+    api_key = os.environ.get("GROQ_API_KEY") or keyring.get_password("Groq", "key")
     if not api_key:
         raise ValueError(
-            "Groq API key not found. Set it with: "
+            "Groq API key not found. Set the GROQ_API_KEY env var, or use keyring: "
             "keyring.set_password('Groq', 'key', 'your-api-key')"
         )
     return Groq(api_key=api_key)

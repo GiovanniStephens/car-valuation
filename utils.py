@@ -106,12 +106,16 @@ def fetch_trademe_data(make: str, model: str, save_path: str = None) -> pd.DataF
     import time
     import sys
 
-    consumer_key = keyring.get_password("Trademe", "key")
-    consumer_secret = keyring.get_password("Trademe", "secret")
+    consumer_key = os.environ.get("TRADEME_API_KEY") or keyring.get_password(
+        "Trademe", "key"
+    )
+    consumer_secret = os.environ.get("TRADEME_API_SECRET") or keyring.get_password(
+        "Trademe", "secret"
+    )
 
     if not consumer_key or not consumer_secret:
-        print("Error: TradeMe API credentials not found in keyring.")
-        print("Please set them using:")
+        print("Error: TradeMe API credentials not found.")
+        print("Set TRADEME_API_KEY/TRADEME_API_SECRET env vars, or use keyring:")
         print('  keyring.set_password("Trademe", "key", "YOUR_KEY")')
         print('  keyring.set_password("Trademe", "secret", "YOUR_SECRET")')
         sys.exit(1)
