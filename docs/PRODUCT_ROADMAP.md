@@ -3,6 +3,10 @@
 > **Status:** exploratory / thinking-out-loud. This is a vision doc, not a commitment.
 > It sketches how the current codebase could grow from a set of local scripts into a
 > hosted product. Nothing here is decided; it's here to argue with.
+>
+> **Decisions now live in [`PRD.md`](PRD.md)** — v1 scope, requirements, and how success
+> gets measured. This doc remains the strategy: market thesis, wedge, phases, monetisation.
+> Where the two disagree, the PRD is current.
 
 ## The one-line idea
 
@@ -31,6 +35,7 @@ What already exists in this repo is most of a real valuation engine:
 | **General-model blending** for thin data | `train_general_model.py`, blend rule in `inference.py` | Coverage across long-tail makes/models |
 | **Undervalued batch search** w/ min/max discount + region compare | `find_undervalued.py`, `undervalued_search.yml` | This *is* the product's core loop, in prototype form |
 | **Interactive dashboard** | `dashboard.py` (Streamlit) | v0 of the UI |
+| **LLM extraction from pasted listings** | `llm_extraction.py` (Groq) | Values a listing from free text — the manual path for sources without an API (Facebook Marketplace) |
 
 **What's missing to be a product** (all of it is plumbing, not research):
 continuous/scheduled ingest, a database of listings over time, hosted models,
@@ -146,6 +151,23 @@ Two questions decide whether any of this is real. Answer them cheaply, first.
    If a large share of "40% underpriced" hits are noise or lemons, the alerts are
    worthless and everything above is moot. **This is the make-or-break test.**
 
+   > **Update (2026-08-11):** this test can't be run meaningfully yet — the detector is
+   > broken in two ways, both measured against the 833-listing Toyota RAV4 snapshot.
+   >
+   > - **It deletes its own candidates.** `feature_engineering.py:184` runs IsolationForest
+   >   outlier removal whenever a `price` column is present, which on the deal-finding path
+   >   is always. It drops **41 of 810** listings before scoring, and the dropped rows are
+   >   exactly the cheap-for-spec ones (`2016 / 261,700 km / $8,900`).
+   > - **The 40–80% band is empirically dead.** It matches **2 listings out of 769**; the
+   >   largest discount available is 45%. Meanwhile the quantile model — already trained,
+   >   already on disk, and named in the table above as the honest way to score deals —
+   >   flags **50 listings below P10**, and `find_undervalued.py:154` discards those
+   >   intervals in favour of a point estimate.
+   >
+   > So the precision question is still open, but "measure precision on the current output"
+   > would be measuring a bug. Fix the scorer first, then grade. This reorders the next
+   > steps below; see [`PRD.md`](PRD.md) for the scoring design and the grading protocol.
+
 2. **Do TradeMe's API terms permit commercial use / redistribution of listing data?**
    We use the official API (good), but the *terms* may restrict commercial products or
    redistributing listing data to end users. Read them; if needed, ask TradeMe about a
@@ -159,10 +181,16 @@ estimates) and where it genuinely beats theirs.
 
 ## Immediate next steps (concrete, small)
 
-- [ ] **Precision check** on `find_undervalued.py` output — manually grade ~30–50 flagged deals. (Answers Q1.)
+Reordered 2026-08-11 — the scorer has to be fixed before the precision check means anything.
+
+- [ ] **Fix the scorer** — stop outlier-filtering at inference time, and score against the
+      quantile intervals instead of a percentage band off the point estimate. Half a day,
+      and everything downstream calibrates against it.
+- [ ] **Precision check** on the fixed output — manually grade 40 flagged deals against a
+      fixed rubric, with thresholds pre-registered. (Answers Q1. Protocol in [`PRD.md`](PRD.md).)
 - [ ] **Read the TradeMe API terms** for commercial/redistribution limits. (Answers Q2.)
 - [ ] **Persist listings to a DB** instead of CSVs — start the time series now (cheapest possible moat-builder).
-- [ ] **Schedule `find_undervalued.py`** to run daily and email you the results (Phase 1 in a weekend).
+- [ ] **Schedule ingest + alerting** so it runs unattended and pushes to your phone (Phase 1).
 - [ ] Only then: decide whether Phase 2 (public freemium site) is worth building.
 
 ---
@@ -175,3 +203,9 @@ estimates) and where it genuinely beats theirs.
 - How fast is "fast enough" for alerts — do good deals really vanish in hours, or days?
 - Is the honest ceiling a lifestyle SaaS, and is that the goal — or is this a portfolio /
   credibility piece, or a springboard to the AU market?
+- Facebook Marketplace is in scope as a **manual paste** source (no API, and scraping it
+  breaches Meta's terms). Is manual entry enough to be useful, or does a meaningful share
+  of NZ private-sale deal flow live there — and if so, is there any durable way to reach it?
+- If the tool drafts negotiation messages, is AI assistance disclosed to the seller? Dealers
+  negotiate professionally; private sellers mostly don't, and that asymmetry is the real
+  question rather than the drafting itself.
