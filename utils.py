@@ -100,7 +100,8 @@ def fetch_trademe_data(make: str, model: str, save_path: str = None) -> pd.DataF
     Raises:
         SystemExit: If credentials are missing or no listings are found.
     """
-    from requests_oauthlib import OAuth1Session
+    from scrapekit.sites import accept_all
+    from scrapekit.sites.trademe import TradeMe
     import keyring
     import json
     import time
@@ -120,11 +121,12 @@ def fetch_trademe_data(make: str, model: str, save_path: str = None) -> pd.DataF
         print('  keyring.set_password("Trademe", "secret", "YOUR_SECRET")')
         sys.exit(1)
 
-    trademe_session = OAuth1Session(consumer_key, consumer_secret)
+    # The adapter's signed client only: this function reads every answer as JSON, as before.
+    trademe_session = TradeMe(consumer_key, consumer_secret).http
 
     base_url = f"https://api.trademe.co.nz/v1/Search/Motors/Used.json?make={make}&model={model}&rows=500"
 
-    response = trademe_session.get(base_url)
+    response = trademe_session.get(base_url, accept=accept_all)
     parsed_data = json.loads(response.content)
     total_count = parsed_data["TotalCount"]
 
@@ -139,7 +141,7 @@ def fetch_trademe_data(make: str, model: str, save_path: str = None) -> pd.DataF
 
     for i in range(1, n_pages + 1):
         url = base_url + f"&page={i}"
-        response = trademe_session.get(url)
+        response = trademe_session.get(url, accept=accept_all)
         parsed_data = json.loads(response.content)
         listings = parsed_data["List"]
         page_df = pd.DataFrame.from_dict(listings)
