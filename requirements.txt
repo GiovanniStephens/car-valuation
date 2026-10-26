@@ -5,8 +5,9 @@ hdbscan>=0.8.40
 keyring==25.1.0
 pandas>=1.5.3
 PyYAML==6.0.1
-requests_oauthlib==2.0.0
 scikit-learn>=1.3.0
 sentence_transformers==2.6.1
 streamlit>=1.30
 plotly>=5.18
+# Private: installs over SSH with a key that can read the scrapekit repo.
+scrapekit[trademe] @ git+ssh://git@github.com/GiovanniStephens/scrapekit.git@v0.3.0#subdirectory=python
